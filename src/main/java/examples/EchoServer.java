@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Subbu Allamaraju
+ * Copyright (c) 2011 CONTRIBUTORS
  *
  * This file is licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the License at
@@ -12,12 +12,17 @@
  * limitations under the License.
  */
 
+
 package examples;
 
-import org.tini.core.TiniRequest;
-import org.tini.core.TiniResponse;
-import org.tini.core.Server;
+import org.tini.server.ServerRequest;
+import org.tini.server.ServerResponse;
+import org.tini.server.HttpServer;
 
+import java.net.StandardSocketOption;
+import java.nio.ByteBuffer;
+import java.nio.channels.CompletionHandler;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,25 +30,51 @@ import java.util.Map;
  */
 public class EchoServer {
 
-    public static void main(String[] args) {
-        Server server = Server.createServer();
+    public static void main(final String[] args) throws Exception {
+        final HttpServer server = HttpServer.createServer();
 
-        server.use(null, new Object() {
-            public void service(TiniRequest request, TiniResponse response) {
-                response.write(request.getMethod().getName() + " " + request.getRequestUri() + " " + request.getProtocolVersion() + "\n");
-                for(Map.Entry<String, String> h : request.getHeaders()) {
-                    response.write(h.getKey() + ": " + h.getValue() + "\r\n");
+        // TODO: Test
+        server.setOption(StandardSocketOption.SO_KEEPALIVE, true);
+        server.setOption(StandardSocketOption.TCP_NODELAY, true);
+
+        server.use(new Object() {
+            public void service(final ServerRequest request, final ServerResponse response) {
+
+                response.setContentType("text/html");
+                response.addHeader("Connection", "keep-alive");
+                response.addHeader("Transfer-Encoding", "chunked");
+
+                // Echo request line - by now it has been read
+                response.write(request.getMethod() + " " + request.getRequestUri() + " " + request.getVersion() + "\n");
+
+                // Echo headers
+                final Map<String, List<String>> headers = request.getHeaders();
+                for(final String name : headers.keySet()) {
+                    final List<String> values = headers.get(name);
+                    for(final String value : values) {
+                        response.write(name + ": " + value + "\n");
+                    }
                 }
                 response.write("\r\n");
 
-                // Dump the body
-                response.write(request.getBody());
+                // Echo body
+                request.onData(new CompletionHandler<ByteBuffer, Void>() {
+                    @Override
+                    public void completed(final ByteBuffer result, final Void count) {
+                        response.write(result);
+                        if(!result.hasRemaining()) {
+                            response.end();
+                        }
+                    }
 
-                // Done
-                response.close();
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
             }
-
         });
+
         server.listen(3000);
     }
 }

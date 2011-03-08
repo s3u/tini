@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Subbu Allamaraju
+ * Copyright (c) 2011 CONTRIBUTORS
  *
  * This file is licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the License at
@@ -14,54 +14,71 @@
 
 package examples;
 
-import org.tini.core.TiniResponse;
-import org.tini.core.TiniRequest;
-import org.tini.core.Server;
-import org.jboss.netty.util.CharsetUtil;
+import org.tini.server.ServerRequest;
+import org.tini.server.ServerResponse;
+import org.tini.server.HttpServer;
 
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
-import java.util.Map;
+import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.util.concurrent.TimeUnit;
 
-/**
- * A simple app that prints Hello World
- */
 public class HelloWorldServer {
 
-    public static void main(String[] args) {
-        Server server = Server.createServer();
-        server.use("/users", new Object() {
-            @GET
-            public void get(TiniRequest request, TiniResponse response) {
-                response.setContentType("text/plain; charset=UTF-8");
-                for(int i = 0; i < 100; i++) {
-                    response.write("Hello World".getBytes(CharsetUtil.UTF_8));
-                }
+    public static void main(final String[] args) throws Exception {
+        final HttpServer server = HttpServer.createServer();
+        server.setIdleTimeout(60, TimeUnit.SECONDS);
 
-                for(int i = 0; i < 100; i++) {
-                    response.write("Hello World".getBytes(CharsetUtil.UTF_8));
-
+        // 204
+        server.use("/204",
+            new Object() {
+                @GET
+                public void get(final ServerRequest request, final ServerResponse response) {
+                    response.setStatus(204, "No Content");
+                    response.addHeader("Connection", "close");
+                    response.writeHead();
+                    response.end();
                 }
-                response.close();
             }
-        });
+        );
+
+        // Test without ab -k
+        server.use("/close",
+            new Object() {
+                @GET
+                public void get(final ServerRequest request, final ServerResponse response) {
+                    response.setContentType("text/plain; charset=UTF-8");
+                    final byte[] content = "hello world".getBytes(Charset.forName("UTF-8"));
+                    response.addHeader("Content-Length", Integer.toString(content.length));
+                    response.addHeader("Connection", "close");
+                    response.write(content);
+                    response.end();
+                }
+            }
+        );
         // This is the default handler for the server
-        server.use(null, new Object() {
-            @GET
-            @PUT
-            @DELETE
-            @HEAD
-            @POST
-            public void get(TiniRequest request, TiniResponse response) {
-                response.setContentType("text/html");
-                response.write("<p>Hello World</p>");
-                response.close();
+        // Test with ab -k
+        server.use(new
+            Object() {
+                @GET
+                @PUT
+                @DELETE
+                @HEAD
+                @POST
+                public void get(final ServerRequest request, final ServerResponse response) throws UnsupportedEncodingException {
+                    response.setContentType("text/plain;charset=UTF-8");
+                    final byte[] content = "hello world".getBytes(Charset.forName("UTF-8"));
+                    response.addHeader("Content-Length", Integer.toString(content.length));
+                    response.write(content);
+                    response.end();
+                }
             }
 
-        });
+        );
         server.listen(3000);
     }
 }
