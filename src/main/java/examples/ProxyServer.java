@@ -37,7 +37,6 @@ import java.util.Map;
 public class ProxyServer {
     public static void main(final String[] args) throws Exception {
         final HttpServer server = HttpServer.createServer();
-
         server.use(new Object() {
             public void service(final ServerRequest request, final ServerResponse response) throws URISyntaxException, IOException {
                 final URI uri = new URI(request.getRequestLine().getUri());
@@ -45,7 +44,7 @@ public class ProxyServer {
                 connection.connect(uri.getHost(), uri.getPort(), new CompletionHandler<Void, Void>() {
                     @Override
                     public void completed(final Void result, final Void attachment) {
-                        // After connection, send a request.
+                        // Connected, now send a request.
                         final ClientRequest clientRequest = connection.request(uri.getPath(), request.getRequestLine().getMethod(), request.getHeaders());
                         clientRequest.onResponse(new CompletionHandler<ClientResponse, Void>() {
                             @Override

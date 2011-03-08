@@ -143,7 +143,7 @@ public abstract class HttpParser {
      */
     protected void shutdown() {
         try {
-            logger.severe("Err - closing the connection");
+            logger.log(Level.SEVERE, "Err - closing the connection");
             channel.close();
         }
         catch(IOException ioe) {

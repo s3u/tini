@@ -71,9 +71,8 @@ public class ResponseParser extends HttpParser {
                         this.failed(new IOException("Malformed response line - " + line.toString()), null);
                     }
                     else {
-                        int status = 200;
                         try {
-                            status = Integer.parseInt(initialLine[1]);
+                            final int status = Integer.parseInt(initialLine[1]);
                             final ResponseLine responseLine = new ResponseLine(initialLine[0], status, initialLine[2]);
                             try {
                                 for(final CompletionHandler<ResponseLine, Void> handler : onResponseLine) {
