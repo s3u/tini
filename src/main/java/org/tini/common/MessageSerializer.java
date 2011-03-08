@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -57,7 +58,7 @@ public abstract class MessageSerializer {
     }
 
     /**
-     * <p>Add a response header.</p>
+     * <p>Adds headers.</p>
      *
      * @param name  name
      * @param value value
@@ -67,6 +68,20 @@ public abstract class MessageSerializer {
             sink.closeWhenDone();
         }
         headers.put(name.toLowerCase(), value);
+    }
+
+    /**
+     * Adds headers.
+     *
+     * @param headers headers
+     */
+    public void addHeaders(final Map<String, List<String>> headers) {
+        for(final String name : headers.keySet()) {
+            final List<String> values = headers.get(name);
+            for(final String value : values) {
+                this.addHeader(name, value);
+            }
+        }
     }
 
     /**

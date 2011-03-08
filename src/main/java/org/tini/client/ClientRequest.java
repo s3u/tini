@@ -105,7 +105,7 @@ public class ClientRequest extends MessageSerializer {
     }
 
     /**
-     * Writes the request line and headers.
+     * Writes the request line and headers and begins parsing the response.
      */
     public void writeHead() {
         if(!headers.containsKey("host")) {

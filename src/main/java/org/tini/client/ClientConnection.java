@@ -24,6 +24,7 @@ import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -55,21 +56,20 @@ public class ClientConnection {
      * Opens a connection to the specified host at the specified port, and invokes the completion
      * handler upon success or failure.
      *
-     * @param host host
-     * @param port port
+     * @param host    host
+     * @param port    port
      * @param handler handler
      * @throws IOException
      */
     // TODO: Look from open connections for reuse
     public void connect(final String host, final int port, final CompletionHandler<Void, Void> handler) throws IOException {
-        final InetSocketAddress socketAddress = new InetSocketAddress(host, port);
-
         assert host != null;
-        assert port > 0;
         assert handler != null;
 
         this.host = host;
-        this.port = port;
+        this.port = port == -1 ? 80 : port;
+
+        final InetSocketAddress socketAddress = new InetSocketAddress(this.host, this.port);
 
         executorService = Executors.newCachedThreadPool();
         channelGroup = AsynchronousChannelGroup.withCachedThreadPool(executorService, 1);
@@ -78,21 +78,46 @@ public class ClientConnection {
     }
 
     /**
-     * <p>Creates an HTTP request for the given path (or request URI) and the HTTP method.</p>
+     * <p>Creates an HTTP request for the given path (or request URI) and the HTTP method.</p> <p/>
+     * <p>Until the {@link ClientRequest#write(byte[])} or {@link
+     * org.tini.client.ClientRequest#writeHead()} is called, no data will be written to the
+     * connection.</p>
      *
-     * <p>Until the {@link ClientRequest#write(byte[])} method is called, no data will be written
-     * to the connection.</p>
-     *
-     * @param path path or request URI
+     * @param path   path or request URI
      * @param method HTTP method
      * @return request object
      */
     public ClientRequest request(final String path, final String method) {
-        assert path != null;
         assert method != null;
 
-        return new ClientRequest(host, port, path, method, new ResponseParser(channel, 1, TimeUnit.MINUTES),
+        final String p = path == null || path.equals("") ? "/" : path;
+        return new ClientRequest(host, port, p, method, new ResponseParser(channel, 1, TimeUnit.MINUTES),
             new DirectSink(channel));
+    }
+
+    /**
+     * <p>Creates an HTTP request for the given path (or request URI) and the HTTP method, and headers. <p/>
+     *
+     * <p>Until the {@link ClientRequest#write(byte[])} or {@link
+     * org.tini.client.ClientRequest#writeHead()} is called, no data will be written to the
+     * connection.</p>
+     *
+     * @param path    path or request URI
+     * @param method  HTTP method
+     * @param headers
+     * @return request object
+     */
+    public ClientRequest request(final String path, final String method, final Map<String, List<String>> headers) {
+        final ClientRequest request = request(path, method);
+
+        // Copy headers to the origin
+        for(final String name : headers.keySet()) {
+            final List<String> values = headers.get(name);
+            for(final String value : values) {
+                request.addHeader(name, value);
+            }
+        }
+        return request;
     }
 
     /**

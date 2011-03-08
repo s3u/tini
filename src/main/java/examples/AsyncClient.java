@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -23,31 +22,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class AsyncClient {
 
-    public static void main(final String[] args) {
+    public static void main(final String[] args) throws URISyntaxException {
 
         final CountDownLatch lock = new CountDownLatch(1);
 
-        String host = "www.subbu.org";
-        int port = 80;
-        String _path = "/";
+        final URI uri;
         if(args.length > 0 && args[0] != null) {
-            try {
-                final URI uri = new URI(args[0]);
-                host = uri.getHost();
-                port = uri.getPort() == -1 ? 80 : uri.getPort();
-                _path = uri.getPath() == null ? "" : uri.getPath();
-            }
-            catch(URISyntaxException use) {
-            }
+            uri = new URI(args[0]);
+        }
+        else {
+            uri = new URI("http://www.subbu.org");
         }
 
-        final String path = _path;
         final ClientConnection connection = new ClientConnection();
         try {
-            connection.connect(host, port, new CompletionHandler<Void, Void>() {
+            connection.connect(uri.getHost(), uri.getPort(), new CompletionHandler<Void, Void>() {
                 @Override
                 public void completed(final Void result, final Void attachment) {
-                    final ClientRequest request = connection.request(path, "GET");
+                    final ClientRequest request = connection.request(uri.getPath(), "GET");
                     request.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
                         @Override
                         public void completed(final ResponseLine result, final Void attachment) {
