@@ -1,4 +1,8 @@
-To try
+
+# What is Tini
+
+Tini is a async I/O HTTP client/server framework. You can use this to run HTTP clients, HTTP
+servers, or even proxies. Tini is currently based on Java 7.
 
 ## Setup and Build
 
