@@ -29,7 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A transparent proxy server - i.e., does not support CONNECT.
+ * A transparent proxy server - does not support CONNECT.
  *
  * @author Subbu Allamaraju
  */
@@ -41,14 +41,11 @@ public class ProxyServer {
             public void service(final ServerRequest request, final ServerResponse response) {
                 try {
                     final URI uri = new URI(request.getRequestUri());
-                    final String host = uri.getHost();
-                    final int port = uri.getPort();
-                    final String path = uri.getPath();
                     final ClientConnection connection = new ClientConnection();
-                    connection.connect(host, port, new CompletionHandler<Void, Void>() {
+                    connection.connect(uri.getHost(), uri.getPort(), new CompletionHandler<Void, Void>() {
                         @Override
                         public void completed(final Void result, final Void attachment) {
-                            final ClientRequest clientRequest = connection.request(path, request.getMethod());
+                            final ClientRequest clientRequest = connection.request(uri.getPath(), request.getMethod());
 
                             // Copy headers to the origin
                             final Map<String, List<String>> headers = request.getHeaders();
