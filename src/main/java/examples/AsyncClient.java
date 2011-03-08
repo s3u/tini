@@ -81,6 +81,7 @@ public class AsyncClient {
                             int available = 0;
                             try {
                                 available = result.remaining();
+                                System.err.println(available);
                                 total.addAndGet(result.remaining());
                                 final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
                                 System.err.println(charBuffer.toString());
