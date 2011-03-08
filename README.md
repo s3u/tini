@@ -1,8 +1,17 @@
 To try
 
+## Setup and Build
+
 Set JAVA_HOME to point to a JDK7 installation, and add JAVA_HOME/bin to the path.
 
-mvn clean install
+    mvn clean install
 
-./run.bash examples.EchoServer to start a server
-[./run.bash examples.AsyncClient to ping the server - TODO]
+## Examples
+
+    ./run.bash examples.HelloWorldServer # Hello world
+    ./run.bash examples.EchoServer # Starts a echo server
+    ./run.bash examples.ProxyServer # Starts a proxy server
+
+## Client Example
+
+    ./run.bash examples.AsyncClient # Starts a client
