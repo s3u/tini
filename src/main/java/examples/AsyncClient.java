@@ -2,6 +2,7 @@ package examples;
 
 import org.tini.client.ClientConnection;
 import org.tini.client.ClientRequest;
+import org.tini.client.ClientResponse;
 import org.tini.parser.ResponseLine;
 
 import java.io.IOException;
@@ -40,47 +41,57 @@ public class AsyncClient {
                 @Override
                 public void completed(final Void result, final Void attachment) {
                     final ClientRequest request = connection.request(uri.getPath(), "GET");
-                    request.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
+                    request.onResponse(new CompletionHandler<ClientResponse, Void>() {
                         @Override
-                        public void completed(final ResponseLine result, final Void attachment) {
-                            System.err.println(result.toString());
-                        }
+                        public void completed(final ClientResponse response, final Void attachment) {
+                            response.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
+                                @Override
+                                public void completed(final ResponseLine result, final Void attachment) {
+                                    System.err.println(result.toString());
+                                }
 
-                        @Override
-                        public void failed(final Throwable exc, final Void attachment) {
-                            exc.printStackTrace();
-                        }
-                    });
-                    request.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                        @Override
-                        public void completed(final Map<String, List<String>> result, final Void attachment) {
-                            for(final String key : result.keySet()) {
-                                for(final String val : result.get(key)) {
-                                    System.err.println(key + ": " + val);
+                                @Override
+                                public void failed(final Throwable exc, final Void attachment) {
+                                    exc.printStackTrace();
                                 }
-                            }
-                        }
+                            });
+                            response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                                @Override
+                                public void completed(final Map<String, List<String>> result, final Void attachment) {
+                                    for(final String key : result.keySet()) {
+                                        for(final String val : result.get(key)) {
+                                            System.err.println(key + ": " + val);
+                                        }
+                                    }
+                                }
 
-                        @Override
-                        public void failed(final Throwable exc, final Void attachment) {
-                            exc.printStackTrace();
-                        }
-                    });
-                    request.onData(new CompletionHandler<ByteBuffer, Void>() {
-                        @Override
-                        public void completed(final ByteBuffer result, final Void attachment) {
-                            if(result.hasRemaining()) {
-                                final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                                System.err.println(charBuffer.toString());
-                            }
-                            else {
-                                try {
-                                    connection.disconnect();
+                                @Override
+                                public void failed(final Throwable exc, final Void attachment) {
+                                    exc.printStackTrace();
                                 }
-                                finally {
-                                    lock.countDown();
+                            });
+                            response.onData(new CompletionHandler<ByteBuffer, Void>() {
+                                @Override
+                                public void completed(final ByteBuffer result, final Void attachment) {
+                                    if(result.hasRemaining()) {
+                                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                                        System.err.println(charBuffer.toString());
+                                    }
+                                    else {
+                                        try {
+                                            connection.disconnect();
+                                        }
+                                        finally {
+                                            lock.countDown();
+                                        }
+                                    }
                                 }
-                            }
+
+                                @Override
+                                public void failed(final Throwable exc, final Void attachment) {
+                                    exc.printStackTrace();
+                                }
+                            });
                         }
 
                         @Override

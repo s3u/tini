@@ -17,15 +17,13 @@ package org.tini.client;
 import org.tini.common.MessageSerializer;
 import org.tini.common.Sink;
 import org.tini.parser.HttpCodecUtil;
-import org.tini.parser.ResponseLine;
 import org.tini.parser.ResponseParser;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.List;
-import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * An HTTP client request.
@@ -40,8 +38,9 @@ public class ClientRequest extends MessageSerializer {
     private final String method;
     private final String path;
 
-    // Response parser
-    private final ResponseParser parser;
+    private final AsynchronousSocketChannel channel;
+
+    private CompletionHandler<ClientResponse, Void> onResponse;
 
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
@@ -50,58 +49,29 @@ public class ClientRequest extends MessageSerializer {
      * @param port   port
      * @param path   request uri or path
      * @param method method
-     * @param parser response
+     * @param channel channel
      * @param sink   sink to write response
      */
     ClientRequest(final String host, final int port,
-                  final String path, final String method,
-                  final ResponseParser parser, final Sink sink) {
+                  final String path,
+                  final String method,
+                  final AsynchronousSocketChannel channel,
+                  final Sink sink) {
         super(sink);
         this.host = host;
         this.port = port;
         this.path = path == null || path.equals("") ? "/" : path;
         this.method = method;
-        this.parser = parser;
+        this.channel = channel;
     }
 
     /**
-     * Registers a handler when the client receives the response line.
+     * Handler to be invoked on response.
      *
-     * @param handler handler
+     * @param onResponse handler
      */
-    public void onResponseLine(final CompletionHandler<ResponseLine, Void> handler) {
-        assert handler != null;
-        parser.onResponseLine(handler);
-    }
-
-    /**
-     * Registers a handler when the client receives headers.
-     *
-     * @param handler handler
-     */
-    public void onHeaders(final CompletionHandler<Map<String, List<String>>, Void> handler) {
-        assert handler != null;
-        parser.onHeaders(handler);
-    }
-
-    /**
-     * Registers a handler when the client receives data. This method may be called several times.
-     *
-     * @param handler handler
-     */
-    public void onData(final CompletionHandler<ByteBuffer, Void> handler) {
-        assert handler != null;
-        parser.onData(handler);
-    }
-
-    /**
-     * Registers a handler when the client receives trailers.
-     *
-     * @param handler handler
-     */
-    public void onTrailers(final CompletionHandler<Map<String, List<String>>, Void> handler) {
-        assert handler != null;
-        parser.onTrailers(handler);
+    public void onResponse(final CompletionHandler<ClientResponse, Void> onResponse) {
+        this.onResponse = onResponse;
     }
 
     /**
@@ -119,6 +89,9 @@ public class ClientRequest extends MessageSerializer {
         super.writeHead(new CompletionHandler<Integer, Void>() {
             @Override
             public void completed(final Integer result, final Void attachment) {
+                final ResponseParser parser = new ResponseParser(channel, 1, TimeUnit.MINUTES);
+                final ClientResponse clientResponse = new ClientResponse(parser);
+                onResponse.completed(clientResponse, null);
                 parser.readNext();
             }
 

@@ -15,7 +15,6 @@
 package org.tini.client;
 
 import org.tini.common.Sink;
-import org.tini.parser.ResponseParser;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -59,7 +57,7 @@ public class ClientConnection {
      * @param host    host
      * @param port    port
      * @param handler handler
-     * @throws IOException
+     * @throws IOException when?
      */
     // TODO: Look from open connections for reuse
     public void connect(final String host, final int port, final CompletionHandler<Void, Void> handler) throws IOException {
@@ -91,7 +89,7 @@ public class ClientConnection {
         assert method != null;
 
         final String p = path == null || path.equals("") ? "/" : path;
-        return new ClientRequest(host, port, p, method, new ResponseParser(channel, 1, TimeUnit.MINUTES),
+        return new ClientRequest(host, port, p, method, channel,
             new DirectSink(channel));
     }
 
@@ -104,7 +102,7 @@ public class ClientConnection {
      *
      * @param path    path or request URI
      * @param method  HTTP method
-     * @param headers
+     * @param headers headers
      * @return request object
      */
     public ClientRequest request(final String path, final String method, final Map<String, List<String>> headers) {

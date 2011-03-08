@@ -17,6 +17,7 @@ package tests.parser;
 import org.junit.Test;
 import org.tini.client.ClientConnection;
 import org.tini.client.ClientRequest;
+import org.tini.client.ClientResponse;
 import org.tini.parser.ResponseLine;
 import org.tini.server.ServerRequest;
 import org.tini.server.ServerResponse;
@@ -76,54 +77,64 @@ public class AsyncClientTest {
                     client.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
                         @Override
                         public void completed(final Void result, final Void attachment) {
-
+                            System.err.println("Connected");
                             // Send a request
                             final ClientRequest request = client.request("/", "GET");
-                            request.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
+                            request.onResponse(new CompletionHandler<ClientResponse, Void>() {
                                 @Override
-                                public void completed(final ResponseLine result, final Void attachment) {
-                                    System.err.println(result.getCode());
-                                    assertEquals(200, result.getCode());
-                                    lock.countDown();
+                                public void completed(final ClientResponse response, final Void attachment) {
+                                    System.err.println("Got response");
+                                    response.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
+                                        @Override
+                                        public void completed(final ResponseLine result, final Void attachment) {
+                                            System.err.println(result.getCode());
+                                            assertEquals(200, result.getCode());
+                                            lock.countDown();
+                                        }
+
+                                        @Override
+                                        public void failed(final Throwable exc, final Void attachment) {
+                                            exc.printStackTrace();
+                                            fail();
+                                        }
+                                    });
+                                    response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                                        @Override
+                                        public void completed(final Map<String, List<String>> result, final Void attachment) {
+                                            System.err.println(result.size());
+                                            assertEquals(5, result.size());
+                                            lock.countDown();
+                                        }
+
+                                        @Override
+                                        public void failed(final Throwable exc, final Void attachment) {
+                                            exc.printStackTrace();
+                                            fail();
+                                        }
+                                    });
+                                    response.onData(new CompletionHandler<ByteBuffer, Void>() {
+                                        @Override
+                                        public void completed(final ByteBuffer result, final Void attachment) {
+                                            final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                                            resp.append(charBuffer.toString());
+                                            if(result.remaining() == 0) {
+                                                assertEquals("hello world", resp.toString());
+                                                lock.countDown();
+                                            }
+                                        }
+
+                                        @Override
+                                        public void failed(final Throwable exc, final Void attachment) {
+                                            exc.printStackTrace();
+                                        }
+                                    });
                                 }
 
                                 @Override
                                 public void failed(final Throwable exc, final Void attachment) {
                                     exc.printStackTrace();
-                                    fail();
                                 }
                             });
-                            request.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                                @Override
-                                public void completed(final Map<String, List<String>> result, final Void attachment) {
-                                    System.err.println(result.size());
-                                    assertEquals(5, result.size());
-                                    lock.countDown();
-                                }
-
-                                @Override
-                                public void failed(final Throwable exc, final Void attachment) {
-                                    exc.printStackTrace();
-                                    fail();
-                                }
-                            });
-                            request.onData(new CompletionHandler<ByteBuffer, Void>() {
-                                @Override
-                                public void completed(final ByteBuffer result, final Void attachment) {
-                                    final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                                    resp.append(charBuffer.toString());
-                                    if(result.remaining() == 0) {
-                                        assertEquals("hello world", resp.toString());
-                                        lock.countDown();
-                                    }
-                                }
-
-                                @Override
-                                public void failed(final Throwable exc, final Void attachment) {
-                                    exc.printStackTrace();
-                                }
-                            });
-
                             request.addHeader("Host", "localhost");
                             request.writeHead();
                             request.end();
@@ -199,25 +210,35 @@ public class AsyncClientTest {
                         public void completed(final Void result, final Void attachment) {
                             // Send a request
                             final ClientRequest request = client.request("/", "GET");
-                            request.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                            request.onResponse(new CompletionHandler<ClientResponse, Void>() {
                                 @Override
-                                public void completed(final Map<String, List<String>> result, final Void attachment) {
-                                    assertEquals(5, result.size());
-                                    assertEquals(1, result.get("transfer-encoding").size());
-                                    assertEquals("chunked", result.get("transfer-encoding").get(0));
-                                    lock.countDown();
-                                }
+                                public void completed(final ClientResponse response, final Void attachment) {
+                                    response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                                        @Override
+                                        public void completed(final Map<String, List<String>> result, final Void attachment) {
+                                            assertEquals(5, result.size());
+                                            assertEquals(1, result.get("transfer-encoding").size());
+                                            assertEquals("chunked", result.get("transfer-encoding").get(0));
+                                            lock.countDown();
+                                        }
 
-                                @Override
-                                public void failed(final Throwable exc, final Void attachment) {
-                                    exc.printStackTrace();
-                                    fail();
-                                }
-                            });
-                            request.onData(new CompletionHandler<ByteBuffer, Void>() {
-                                @Override
-                                public void completed(final ByteBuffer result, final Void attachment) {
-                                    // TODO
+                                        @Override
+                                        public void failed(final Throwable exc, final Void attachment) {
+                                            exc.printStackTrace();
+                                            fail();
+                                        }
+                                    });
+                                    response.onData(new CompletionHandler<ByteBuffer, Void>() {
+                                        @Override
+                                        public void completed(final ByteBuffer result, final Void attachment) {
+                                            // TODO
+                                        }
+
+                                        @Override
+                                        public void failed(final Throwable exc, final Void attachment) {
+                                            exc.printStackTrace();
+                                        }
+                                    });
                                 }
 
                                 @Override
@@ -229,6 +250,7 @@ public class AsyncClientTest {
                             request.addHeader("Host", "localhost");
                             request.writeHead();
                             request.end();
+
                             lock.countDown();
                         }
 

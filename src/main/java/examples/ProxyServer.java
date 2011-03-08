@@ -16,6 +16,7 @@ package examples;
 
 import org.tini.client.ClientConnection;
 import org.tini.client.ClientRequest;
+import org.tini.client.ClientResponse;
 import org.tini.server.HttpServer;
 import org.tini.server.ServerRequest;
 import org.tini.server.ServerResponse;
@@ -44,8 +45,49 @@ public class ProxyServer {
                 connection.connect(uri.getHost(), uri.getPort(), new CompletionHandler<Void, Void>() {
                     @Override
                     public void completed(final Void result, final Void attachment) {
+                        // After connection, send a request.
                         final ClientRequest clientRequest = connection.request(uri.getPath(), request.getMethod(), request.getHeaders());
 
+                        // This handler will be called when the client receives at least the response line
+                        clientRequest.onResponse(new CompletionHandler<ClientResponse, Void>() {
+                            @Override
+                            public void completed(final ClientResponse clientResponse, final Void attachment) {
+                                // Copy response from the origin to the client
+                                clientResponse.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                                    @Override
+                                    public void completed(final Map<String, List<String>> result, final Void attachment) {
+                                        response.addHeaders(result);
+                                    }
+
+                                    @Override
+                                    public void failed(final Throwable exc, final Void attachment) {
+                                        exc.printStackTrace();
+                                    }
+                                });
+
+                                // Copy response data from the origin to the client
+                                clientResponse.onData(new CompletionHandler<ByteBuffer, Void>() {
+                                    @Override
+                                    public void completed(final ByteBuffer result, final Void attachment) {
+                                        response.write(result);
+                                        if(!result.hasRemaining()) {
+                                            response.end();
+                                            connection.disconnect();
+                                        }
+                                    }
+
+                                    @Override
+                                    public void failed(final Throwable exc, final Void attachment) {
+                                        exc.printStackTrace();
+                                    }
+                                });
+                            }
+
+                            @Override
+                            public void failed(final Throwable exc, final Void attachment) {
+                                exc.printStackTrace();
+                            }
+                        });
                         // Send request data to the origin
                         request.onData(new CompletionHandler<ByteBuffer, Void>() {
                             @Override
@@ -58,37 +100,6 @@ public class ProxyServer {
                                 exc.printStackTrace();
                             }
                         });
-
-                        // Copy response from the origin to the client
-                        clientRequest.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                            @Override
-                            public void completed(final Map<String, List<String>> result, final Void attachment) {
-                                response.addHeaders(result);
-                            }
-
-                            @Override
-                            public void failed(final Throwable exc, final Void attachment) {
-                                exc.printStackTrace();
-                            }
-                        });
-
-                        // Copy response data from the origin to the client
-                        clientRequest.onData(new CompletionHandler<ByteBuffer, Void>() {
-                            @Override
-                            public void completed(final ByteBuffer result, final Void attachment) {
-                                response.write(result);
-                                if(!result.hasRemaining()) {
-                                    response.end();
-                                    connection.disconnect();
-                                }
-                            }
-
-                            @Override
-                            public void failed(final Throwable exc, final Void attachment) {
-                                exc.printStackTrace();
-                            }
-                        });
-
                         clientRequest.writeHead();
                     }
 

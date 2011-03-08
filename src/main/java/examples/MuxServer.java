@@ -37,68 +37,68 @@ import java.util.Random;
 public class MuxServer {
 
     public static void main(final String[] args) throws Exception {
-        final HttpServer server = HttpServer.createServer();
-
-        // Waits for upto 5 secs before responding
-        server.use("/r1", new Object() {
-            @GET
-            public void delayResponse(final ServerRequest request, final ServerResponse response) {
-                response.setContentType("text/plain; charset=UTF-8");
-                final Thread t = new Thread(new Wait(request, response));
-                t.start();
-            }
-        });
-
-        // Serves a large file
-        server.use("/r2", new Object() {
-            @GET
-            public void getAFile(final ServerRequest request, final ServerResponse response) throws IOException {
-                final Path path = FileSystems.getDefault().getPath("data/large.log");
-                final AsynchronousFileChannel channel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
-                copyFile(channel, 0, response);
-            }
-        });
-
-        // Fetches a large resource from somewhere else - like a proxy
-        server.use("/r3", new Object() {
-            @GET
-            public void getSomeResource(final ServerRequest request, final ServerResponse response) throws IOException {
-                // Get some data from somewhere else
-                final ClientConnection connection = new ClientConnection();
-                connection.connect("www.example.org", 80, new CompletionHandler<Void, Void>() {
-                    @Override
-                    public void completed(final Void result, final Void attachment) {
-                        response.setStatus(200, "OK");
-                        response.setContentType("text/plain; charset=UTF-8");
-                        final ClientRequest clientRequest = connection.request("/somethinglarge", "GET");
-                        clientRequest.onData(new CompletionHandler<ByteBuffer, Void>() {
-                            @Override
-                            public void completed(final ByteBuffer result, final Void attachment) {
-                                final int size = result.remaining();
-                                response.write(result);
-                                if(size == 0) {
-                                    response.end();
-                                }
-                            }
-
-                            @Override
-                            public void failed(final Throwable exc, final Void attachment) {
-                                // Some error handling
-                            }
-                        });
-                        clientRequest.writeHead();
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        response.setStatus(500, "Internal Server Error");
-                        response.end();
-                    }
-                });
-            }
-        });
-
-        server.listen(3000);
+//        final HttpServer server = HttpServer.createServer();
+//
+//        // Waits for upto 5 secs before responding
+//        server.use("/r1", new Object() {
+//            @GET
+//            public void delayResponse(final ServerRequest request, final ServerResponse response) {
+//                response.setContentType("text/plain; charset=UTF-8");
+//                final Thread t = new Thread(new Wait(request, response));
+//                t.start();
+//            }
+//        });
+//
+//        // Serves a large file
+//        server.use("/r2", new Object() {
+//            @GET
+//            public void getAFile(final ServerRequest request, final ServerResponse response) throws IOException {
+//                final Path path = FileSystems.getDefault().getPath("data/large.log");
+//                final AsynchronousFileChannel channel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
+//                copyFile(channel, 0, response);
+//            }
+//        });
+//
+//        // Fetches a large resource from somewhere else - like a proxy
+//        server.use("/r3", new Object() {
+//            @GET
+//            public void getSomeResource(final ServerRequest request, final ServerResponse response) throws IOException {
+//                // Get some data from somewhere else
+//                final ClientConnection connection = new ClientConnection();
+//                connection.connect("www.example.org", 80, new CompletionHandler<Void, Void>() {
+//                    @Override
+//                    public void completed(final Void result, final Void attachment) {
+//                        response.setStatus(200, "OK");
+//                        response.setContentType("text/plain; charset=UTF-8");
+//                        final ClientRequest clientRequest = connection.request("/somethinglarge", "GET");
+//                        clientRequest.onData(new CompletionHandler<ByteBuffer, Void>() {
+//                            @Override
+//                            public void completed(final ByteBuffer result, final Void attachment) {
+//                                final int size = result.remaining();
+//                                response.write(result);
+//                                if(size == 0) {
+//                                    response.end();
+//                                }
+//                            }
+//
+//                            @Override
+//                            public void failed(final Throwable exc, final Void attachment) {
+//                                // Some error handling
+//                            }
+//                        });
+//                        clientRequest.writeHead();
+//                    }
+//
+//                    @Override
+//                    public void failed(final Throwable exc, final Void attachment) {
+//                        response.setStatus(500, "Internal Server Error");
+//                        response.end();
+//                    }
+//                });
+//            }
+//        });
+//
+//        server.listen(3000);
     }
 
     static void copyFile(final AsynchronousFileChannel channel, final int start, final ServerResponse response) {
