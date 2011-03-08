@@ -34,21 +34,20 @@ public class AsyncClient {
             try {
                 final URI uri = new URI(args[0]);
                 host = uri.getHost();
-                port = uri.getPort();
-                _path = uri.getPath();
+                port = uri.getPort() == -1 ? 80 : uri.getPort();
+                _path = uri.getPath() == null ? "" : uri.getPath();
             }
             catch(URISyntaxException use) {
             }
         }
 
         final String path = _path;
-        final ClientConnection client = new ClientConnection();
+        final ClientConnection connection = new ClientConnection();
         try {
-            client.connect(host, port, new CompletionHandler<Void, Void>() {
+            connection.connect(host, port, new CompletionHandler<Void, Void>() {
                 @Override
                 public void completed(final Void result, final Void attachment) {
-                    final ClientRequest request = client.request(path, "GET");
-                    final AtomicInteger total = new AtomicInteger(0);
+                    final ClientRequest request = connection.request(path, "GET");
                     request.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
                         @Override
                         public void completed(final ResponseLine result, final Void attachment) {
@@ -78,21 +77,16 @@ public class AsyncClient {
                     request.onData(new CompletionHandler<ByteBuffer, Void>() {
                         @Override
                         public void completed(final ByteBuffer result, final Void attachment) {
-                            int available = 0;
-                            try {
-                                available = result.remaining();
-                                System.err.println(available);
-                                total.addAndGet(result.remaining());
+                            if(result.hasRemaining()) {
                                 final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
                                 System.err.println(charBuffer.toString());
-                                if(result.remaining() == 0) {
-                                    System.err.println("Total: " + total.get());
-                                }
                             }
-                            finally {
-                                if(available == 0) { // disconnect on last chunk
+                            else {
+                                try {
+                                    connection.disconnect();
+                                }
+                                finally {
                                     lock.countDown();
-                                    client.disconnect();
                                 }
                             }
                         }

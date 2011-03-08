@@ -46,12 +46,12 @@ public class ClientRequest extends MessageSerializer {
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
      *
-     * @param host host
-     * @param port port
-     * @param path request uri or path
+     * @param host   host
+     * @param port   port
+     * @param path   request uri or path
      * @param method method
      * @param parser response
-     * @param sink sink to write response
+     * @param sink   sink to write response
      */
     ClientRequest(final String host, final int port,
                   final String path, final String method,
@@ -59,7 +59,7 @@ public class ClientRequest extends MessageSerializer {
         super(sink);
         this.host = host;
         this.port = port;
-        this.path = path;
+        this.path = path == null || path.equals("") ? "/" : path;
         this.method = method;
         this.parser = parser;
     }
@@ -109,7 +109,12 @@ public class ClientRequest extends MessageSerializer {
      */
     public void writeHead() {
         if(!headers.containsKey("host")) {
-            headers.put("host", host + ":" + port);
+            if(port == 80) {
+                headers.put("host", host);
+            }
+            else {
+                headers.put("host", host + ":" + port);
+            }
         }
         super.writeHead(new CompletionHandler<Integer, Void>() {
             @Override

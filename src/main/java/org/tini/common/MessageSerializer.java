@@ -116,7 +116,7 @@ public abstract class MessageSerializer {
     }
 
     /**
-     * <p>End the response.
+     * <p>End the message.
      */
     public void end() {
         endLock.writeLock().lock();

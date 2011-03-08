@@ -50,7 +50,7 @@ public abstract class HttpParser {
     // Limits
     protected final int maxInitialLineLength = 8192;
     private final int maxHeaderLineSize = 2048;
-    private final int maxChunkSize = 8192;
+    private final int maxChunkSize = 256 * 1024;
     private final long timeout;
     private final TimeUnit timeUnit;
     private final AtomicInteger bytesRemaining;
@@ -60,9 +60,11 @@ public abstract class HttpParser {
 
     // Handler
     protected CompletionHandler<Void, Void> beforeNext;
-    private final List<CompletionHandler<Map<String, List<String>>, Void>> onHeaders = new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
+    private final List<CompletionHandler<Map<String, List<String>>, Void>> onHeaders =
+        new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
     private CompletionHandler<ByteBuffer, Void> onData = new ReadingCompletionHandler();
-    private final List<CompletionHandler<Map<String, List<String>>, Void>> onTrailers = new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
+    private final List<CompletionHandler<Map<String, List<String>>, Void>> onTrailers =
+        new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
 
     // Headers - we keep the headers to decide whether to parse the message body as chunks or as one
     // known-length body.
@@ -141,12 +143,11 @@ public abstract class HttpParser {
      */
     protected void shutdown() {
         try {
-            logger.severe("Closing the connection");
+            logger.severe("Err - closing the connection");
             channel.close();
         }
         catch(IOException ioe) {
             logger.log(Level.WARNING, ioe.getMessage(), ioe);
-            ioe.printStackTrace();
         }
     }
 
@@ -310,6 +311,7 @@ public abstract class HttpParser {
         }
     }
 
+    // Read as many bytes as necessary till you find CRLF or reach the limit
     protected void onLine(final CompletionHandler<StringBuilder, Void> handler, final StringBuilder line, final int limit) {
         if(first.get() || bytesRemaining.get() == 0) {
             first.compareAndSet(true, false);
@@ -320,6 +322,7 @@ public abstract class HttpParser {
                     bytesRemaining.set(result);
                     if(result > 0) {
                         readBuffer.rewind();
+                        // Got some bytes - may or may be enough though
                         inflightLine(line, limit, handler);
                     }
                 }
@@ -344,6 +347,7 @@ public abstract class HttpParser {
             });
         }
         else {
+            // Already got some bytes - may or may be enough though
             inflightLine(line, limit, handler);
         }
     }
@@ -391,6 +395,7 @@ public abstract class HttpParser {
 
         if(found) {
             try {
+                logger.info(line.toString());
                 handler.completed(line, null);
             }
             catch(Throwable t) {
@@ -398,7 +403,7 @@ public abstract class HttpParser {
             }
         }
         else {
-            // Call recursively to read more
+            // Call recursively to read more as you haven't found CRLF yet
             onLine(handler, line, limit);
         }
     }
@@ -436,9 +441,9 @@ public abstract class HttpParser {
                     readEmptyLineAndChunk();
                 }
                 else if(chunkSize > bytesRemaining.get()) {
-                    // Keep reading as many times as needed to get chunkSize bytes
                     final int pos = bytesRemaining.get();
                     sendDataToApp(bytesRemaining.get());
+                    // Keep reading as many times as needed to get chunkSize bytes
                     readSome(chunkSize - pos);
                 }
             }
@@ -506,10 +511,12 @@ public abstract class HttpParser {
         assert bytesRemaining.get() == 0;
 
         // Allocate a readBuffer to hold toRead bytes
+        logger.info("Going to try to read " + toRead + " bytes");
         readBuffer = ByteBuffer.allocate(toRead);
         channel.read(readBuffer, timeout, timeUnit, null, new CompletionHandler<Integer, Object>() {
             @Override
             public void completed(final Integer result, final Object attachment) {
+                logger.info("Read " + result.toString() + " bytes");
                 bytesRemaining.set(result);
                 readBuffer.rewind();
                 sendDataToApp(Math.min(result, toRead));

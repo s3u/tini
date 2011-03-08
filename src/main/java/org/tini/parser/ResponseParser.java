@@ -68,7 +68,7 @@ public class ResponseParser extends HttpParser {
                 final String[] initialLine = splitInitialLine(line.toString());
                 if(initialLine.length == 3) {
                     if(initialLine[0].length() == 0 || initialLine[1].length() == 0 || initialLine[2].length() == 0) {
-                        this.failed(new IOException("Malformed response line"), null);
+                        this.failed(new IOException("Malformed response line - " + line.toString()), null);
                     }
                     else {
                         int status = 200;
