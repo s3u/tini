@@ -14,9 +14,31 @@
 
 package org.tini.common;
 
+import java.nio.ByteBuffer;
+import java.nio.channels.CompletionHandler;
+
 /**
  * @author Subbu Allamaraju
  */
 public class Utils {
 
+    /**
+     * Copies data as and when it arrives from source to dest
+     *
+     * @param source source
+     * @param dest dest
+     */
+    public static void pump(final ReadableStream source, final WritableStream dest) {
+        source.onData(new CompletionHandler<ByteBuffer, Void>() {
+            @Override
+            public void completed(final ByteBuffer result, final Void count) {
+                dest.write(result);
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                exc.printStackTrace();
+            }
+        });
+    }
 }

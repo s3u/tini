@@ -40,8 +40,8 @@ public class FileServer {
         server.use(new Object() {
             @GET
             public void getAFile(final ServerRequest request, final ServerResponse response) throws IOException {
-                System.err.println("Serving file " + request.getRequestUri());
-                final Path path = FileSystems.getDefault().getPath(request.getRequestUri().substring(1)); // Trim the slash
+                System.err.println("Serving file " + request.getRequestLine().getUri());
+                final Path path = FileSystems.getDefault().getPath(request.getRequestLine().getUri().substring(1)); // Trim the slash
                 final AsynchronousFileChannel channel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
                 copyFile(channel, 0, response);
             }

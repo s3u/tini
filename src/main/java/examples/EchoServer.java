@@ -45,7 +45,7 @@ public class EchoServer {
                 response.addHeader("Transfer-Encoding", "chunked");
 
                 // Echo request line - by now it has been read
-                response.write(request.getMethod() + " " + request.getRequestUri() + " " + request.getVersion() + "\n");
+                response.write(request.getRequestLine().getMethod() + " " + request.getRequestLine().getUri() + " " + request.getRequestLine().getVersion() + "\n");
 
                 // Echo headers
                 final Map<String, List<String>> headers = request.getHeaders();

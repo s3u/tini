@@ -199,7 +199,7 @@ public class RequestPipeline {
 
     private void invokeApp(final ServerRequest httpRequest, final ServerResponse httpResponse,
                            final Map<String, Object> handlers) {
-        final String methodName = httpRequest.getMethod();
+        final String methodName = httpRequest.getRequestLine().getMethod();
         final Class methodAnnotation;
         try {
             methodAnnotation = Class.forName("javax.ws.rs." + methodName.toUpperCase());
@@ -214,11 +214,11 @@ public class RequestPipeline {
         // TODO: Rails style matching
 
         // Dispatch
-        Object handler = handlers.get(httpRequest.getRequestUri());
+        Object handler = handlers.get(httpRequest.getRequestLine().getUri());
         handler = handler == null ? handlers.get(null) : handler;
 
         if(null == handler) {
-            logger.warning("Handler for " + httpRequest.getRequestUri() + " not found");
+            logger.warning("Handler for " + httpRequest.getRequestLine().getUri() + " not found");
             httpResponse.setStatus(404, "Not Found");
             return;
         }
@@ -260,7 +260,7 @@ public class RequestPipeline {
             }
         }
         else {
-            logger.warning("No handler for method " + httpRequest.getMethod() + " found");
+            logger.warning("No handler for method " + httpRequest.getRequestLine().getMethod() + " found");
             httpResponse.setStatus(405, "Method Not Allowed");
             httpResponse.end();
         }

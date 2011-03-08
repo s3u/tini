@@ -40,14 +40,14 @@ public class KeepAliveServerTest {
 
         server.use(null, new Object() {
             public void service(final ServerRequest request, final ServerResponse response) {
-                System.err.println("Received: " + request.getMethod() + " for " + request.getRequestUri());
+                System.err.println("Received: " + request.getRequestLine().getMethod() + " for " + request.getRequestLine().getUri());
                 response.setContentType("text/plain; charset=UTF-8");
                 response.addHeader("Connection", "keep-alive");
                 response.addHeader("Transfer-Encoding", "chunked");
 
                 // Purposefully blocking to avoid concurrent handling of requests from an open
                 // connection.
-                final int id = Integer.parseInt(request.getRequestUri().substring(1));
+                final int id = Integer.parseInt(request.getRequestLine().getUri().substring(1));
                 try {
                     Thread.sleep(1000/id);
                 }
@@ -55,7 +55,7 @@ public class KeepAliveServerTest {
                     ie.printStackTrace();
                 }
 
-                response.write(request.getRequestUri());
+                response.write(request.getRequestLine().getUri());
                 response.end();
             }
         });

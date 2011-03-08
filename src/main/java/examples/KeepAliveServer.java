@@ -35,7 +35,7 @@ public class KeepAliveServer {
 
                 // Purposefully blocking to avoid concurrent handling of requests from an open
                 // connection.
-                final int id = Integer.parseInt(request.getRequestUri().substring(1));
+                final int id = Integer.parseInt(request.getRequestLine().getUri().substring(1));
                 try {
                     Thread.sleep(1000/id);
                 }
@@ -43,7 +43,7 @@ public class KeepAliveServer {
                     ie.printStackTrace();
                 }
 
-                response.write(request.getRequestUri());
+                response.write(request.getRequestLine().getUri());
                 response.end();
             }
         });

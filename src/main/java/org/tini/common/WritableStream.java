@@ -33,9 +33,9 @@ import java.util.logging.Logger;
  *
  * @author Subbu Allamaraju
  */
-public abstract class MessageSerializer {
+public abstract class WritableStream {
 
-    protected static final Logger logger = Logger.getLogger("org.tini.client");
+    protected static final Logger logger = Logger.getLogger("org.tini.common");
 
     protected final Map<String, String> headers = new ConcurrentHashMap<String, String>();
 
@@ -53,7 +53,7 @@ public abstract class MessageSerializer {
     final Sink sink;
     private boolean hasBody = false;
 
-    protected MessageSerializer(final Sink sink) {
+    protected WritableStream(final Sink sink) {
         this.sink = sink;
     }
 
@@ -207,7 +207,7 @@ public abstract class MessageSerializer {
 
             // Add Assoc-Req header - see http://tools.ietf.org/html/draft-nottingham-http-pipeline-00
 //        if(isChunked) {
-//            headers.put("Assoc-Req", request.getHeader("host") + request.getRequestUri());
+//            headers.put("Assoc-Req", request.getHeader("host") + request.getRequestLine().getUri());
 //            headers.put("Assoc-Chunk-ID", chunkId);
 //        }
             try {

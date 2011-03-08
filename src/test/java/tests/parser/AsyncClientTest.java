@@ -18,7 +18,6 @@ import org.junit.Test;
 import org.tini.client.ClientConnection;
 import org.tini.client.ClientRequest;
 import org.tini.client.ClientResponse;
-import org.tini.parser.ResponseLine;
 import org.tini.server.ServerRequest;
 import org.tini.server.ServerResponse;
 import org.tini.server.HttpServer;
@@ -83,21 +82,10 @@ public class AsyncClientTest {
                             request.onResponse(new CompletionHandler<ClientResponse, Void>() {
                                 @Override
                                 public void completed(final ClientResponse response, final Void attachment) {
-                                    System.err.println("Got response");
-                                    response.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
-                                        @Override
-                                        public void completed(final ResponseLine result, final Void attachment) {
-                                            System.err.println(result.getCode());
-                                            assertEquals(200, result.getCode());
-                                            lock.countDown();
-                                        }
+                                    System.err.println(response.getResponseLine().getCode());
+                                    assertEquals(200, response.getResponseLine().getCode());
+                                    lock.countDown();
 
-                                        @Override
-                                        public void failed(final Throwable exc, final Void attachment) {
-                                            exc.printStackTrace();
-                                            fail();
-                                        }
-                                    });
                                     response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
                                         @Override
                                         public void completed(final Map<String, List<String>> result, final Void attachment) {

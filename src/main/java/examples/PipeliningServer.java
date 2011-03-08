@@ -29,7 +29,7 @@ public class PipeliningServer {
 
         server.use(new Object() {
             public void service(final ServerRequest request, final ServerResponse response) {
-                System.err.println("Received: " + request.getMethod() + " for " + request.getRequestUri());
+                System.err.println("Received: " + request.getRequestLine().getMethod() + " for " + request.getRequestLine().getUri());
                 response.setContentType("text/plain; charset=UTF-8");
                 response.addHeader("Connection", "keep-alive");
                 response.addHeader("Transfer-Encoding", "chunked");
@@ -38,7 +38,7 @@ public class PipeliningServer {
                 final Runnable runnable = new Runnable() {
                     @Override
                     public void run() {
-                        final int id = Integer.parseInt(request.getRequestUri().substring(1));
+                        final int id = Integer.parseInt(request.getRequestLine().getUri().substring(1));
                         try {
                             Thread.sleep(1000/id);
                         }
@@ -46,8 +46,8 @@ public class PipeliningServer {
                             ie.printStackTrace();
                         }
 
-                        response.write(request.getRequestUri());
-                        System.err.println("Ending " + request.getRequestUri());
+                        response.write(request.getRequestLine().getUri());
+                        System.err.println("Ending " + request.getRequestLine().getUri());
                         response.end();
                     }
                 };

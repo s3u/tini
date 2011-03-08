@@ -141,7 +141,7 @@ public class MuxServer {
 
         @Override
         public void run() {
-            final int id = Integer.parseInt(request.getRequestUri().substring(1));
+            final int id = Integer.parseInt(request.getRequestLine().getUri().substring(1));
             try {
                 // Sleep for some 0-5 sec
                 Thread.sleep(new Random().nextInt(5000));
@@ -150,7 +150,7 @@ public class MuxServer {
                 ie.printStackTrace();
             }
 
-            response.write(request.getRequestUri());
+            response.write(request.getRequestLine().getUri());
             response.end();
         }
     }

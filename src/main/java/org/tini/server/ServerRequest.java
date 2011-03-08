@@ -14,10 +14,10 @@
 
 package org.tini.server;
 
+import org.tini.common.ReadableStream;
 import org.tini.parser.HttpParser;
 import org.tini.parser.RequestLine;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.util.Collections;
 import java.util.List;
@@ -39,15 +39,13 @@ import java.util.Map;
  *
  * @author Subbu Allamaraju
  */
-public class ServerRequest {
+public class ServerRequest extends ReadableStream {
 
     private final RequestLine requestLine;
     private Map<String, List<String>> headers = Collections.EMPTY_MAP;
 
-    private final HttpParser parser;
-
     protected ServerRequest(final HttpParser parser, final RequestLine requestLine) {
-        this.parser = parser;
+        super(parser);
         this.requestLine = requestLine;
     }
 
@@ -55,46 +53,8 @@ public class ServerRequest {
         this.headers = headers;
     }
 
-    /**
-     * <p>Returns the request method.</p>
-     *
-     * @return method
-     */
-    public String getMethod() {
-        if(this.requestLine != null) {
-            return this.requestLine.getMethod();
-        }
-        else {
-            throw new IllegalStateException("Request line not read yet");
-        }
-    }
-
-    /**
-     * <p>Returns the request URI.</p>
-     *
-     * @return request URI
-     */
-    public String getRequestUri() {
-        if(this.requestLine != null) {
-            return this.requestLine.getUri();
-        }
-        else {
-            throw new IllegalStateException("Request line not read yet");
-        }
-    }
-
-    /**
-     * <p>Returns HTTP version.</p>
-     *
-     * @return version
-     */
-    public String getVersion() {
-        if(this.requestLine != null) {
-            return requestLine.getVersion();
-        }
-        else {
-            throw new IllegalStateException("Request line not read yet");
-        }
+    public RequestLine getRequestLine() {
+        return requestLine;
     }
 
     /**
@@ -121,25 +81,5 @@ public class ServerRequest {
      */
     public Map<String, List<String>> getHeaders() {
         return Collections.unmodifiableMap(headers);
-    }
-
-    /**
-     * <p>Registers a handler to receive HTTP request body in zero or more chunks.<p/>
-     *
-     * <p>This method does not resize chunks. </p>
-     *
-     * @param handler handler
-     */
-    public void onData(final CompletionHandler<ByteBuffer, Void> handler) {
-        parser.onData(handler);
-    }
-
-    /**
-     * <p>Registers a handler to receive any trailers.</p>
-     *
-     * @param handler handler
-     */
-    public void onTrailers(final CompletionHandler<Map<String, List<String>>, Void> handler) {
-        parser.onTrailers(handler);
     }
 }

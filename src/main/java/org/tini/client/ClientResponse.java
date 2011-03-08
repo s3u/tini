@@ -14,76 +14,34 @@
 
 package org.tini.client;
 
-import org.tini.common.Sink;
+import org.tini.common.ReadableStream;
 import org.tini.parser.ResponseLine;
 import org.tini.parser.ResponseParser;
-
-import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author Subbu Allamaraju
  */
-public class ClientResponse {
+public class ClientResponse extends ReadableStream {
 
-    // Response parser
-    private final ResponseParser parser;
+    private final ResponseLine responseLine;
 
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
      *
-     * @param parser response
+     * @param parser parser
+     * @param responseLine response line
      */
-    ClientResponse(final ResponseParser parser) {
-//        super(sink);
-//        this.host = host;
-//        this.port = port;
-//        this.path = path == null || path.equals("") ? "/" : path;
-//        this.method = method;
-        this.parser = parser;
+    ClientResponse(final ResponseParser parser, final ResponseLine responseLine) {
+        super(parser);
+        this.responseLine = responseLine;
     }
 
     /**
-     * Registers a handler when the client receives the response line.
+     * Returns response line
      *
-     * @param handler handler
+     * @return response line
      */
-    public void onResponseLine(final CompletionHandler<ResponseLine, Void> handler) {
-        assert handler != null;
-        parser.onResponseLine(handler);
+    public ResponseLine getResponseLine() {
+        return responseLine;
     }
-
-    /**
-     * Registers a handler when the client receives headers.
-     *
-     * @param handler handler
-     */
-    public void onHeaders(final CompletionHandler<Map<String, List<String>>, Void> handler) {
-        assert handler != null;
-        parser.onHeaders(handler);
-    }
-
-    /**
-     * Registers a handler when the client receives data. This method may be called several times.
-     *
-     * @param handler handler
-     */
-    public void onData(final CompletionHandler<ByteBuffer, Void> handler) {
-        assert handler != null;
-        parser.onData(handler);
-    }
-
-    /**
-     * Registers a handler when the client receives trailers.
-     *
-     * @param handler handler
-     */
-    public void onTrailers(final CompletionHandler<Map<String, List<String>>, Void> handler) {
-        assert handler != null;
-        parser.onTrailers(handler);
-    }
-
-
 }

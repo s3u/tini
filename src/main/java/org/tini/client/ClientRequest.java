@@ -14,9 +14,10 @@
 
 package org.tini.client;
 
-import org.tini.common.MessageSerializer;
+import org.tini.common.WritableStream;
 import org.tini.common.Sink;
 import org.tini.parser.HttpCodecUtil;
+import org.tini.parser.ResponseLine;
 import org.tini.parser.ResponseParser;
 
 import java.io.ByteArrayOutputStream;
@@ -30,8 +31,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Subbu Allamaraju
  */
-// TODO: add onStatus methods for different response codes
-public class ClientRequest extends MessageSerializer {
+public class ClientRequest extends WritableStream {
 
     private final String host;
     private final int port;
@@ -90,8 +90,19 @@ public class ClientRequest extends MessageSerializer {
             @Override
             public void completed(final Integer result, final Void attachment) {
                 final ResponseParser parser = new ResponseParser(channel, 1, TimeUnit.MINUTES);
-                final ClientResponse clientResponse = new ClientResponse(parser);
-                onResponse.completed(clientResponse, null);
+                parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
+                    @Override
+                    public void completed(final ResponseLine result, final Void attachment) {
+                        final ClientResponse clientResponse = new ClientResponse(parser, result);
+                        onResponse.completed(clientResponse, null);
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        // TODO
+                    }
+                });
+
                 parser.readNext();
             }
 

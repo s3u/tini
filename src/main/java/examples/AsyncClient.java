@@ -3,7 +3,6 @@ package examples;
 import org.tini.client.ClientConnection;
 import org.tini.client.ClientRequest;
 import org.tini.client.ClientResponse;
-import org.tini.parser.ResponseLine;
 
 import java.io.IOException;
 import java.net.URI;
@@ -27,13 +26,7 @@ public class AsyncClient {
 
         final CountDownLatch lock = new CountDownLatch(1);
 
-        final URI uri;
-        if(args.length > 0 && args[0] != null) {
-            uri = new URI(args[0]);
-        }
-        else {
-            uri = new URI("http://www.subbu.org");
-        }
+        final URI uri = args.length > 0 && args[1] != null? new URI(args[0]) : new URI("http://www.subbu.org");
 
         final ClientConnection connection = new ClientConnection();
         try {
@@ -44,17 +37,7 @@ public class AsyncClient {
                     request.onResponse(new CompletionHandler<ClientResponse, Void>() {
                         @Override
                         public void completed(final ClientResponse response, final Void attachment) {
-                            response.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
-                                @Override
-                                public void completed(final ResponseLine result, final Void attachment) {
-                                    System.err.println(result.toString());
-                                }
-
-                                @Override
-                                public void failed(final Throwable exc, final Void attachment) {
-                                    exc.printStackTrace();
-                                }
-                            });
+                            System.err.println(response.getResponseLine().toString());
                             response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
                                 @Override
                                 public void completed(final Map<String, List<String>> result, final Void attachment) {
