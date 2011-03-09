@@ -29,11 +29,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
 
 /**
- * Base class for HTTP responses on the server, and HTTP connections on the client.
+ *  A writable message consisting of headers, followed by body, followed by trailers.
  *
  * @author Subbu Allamaraju
  */
-public abstract class WritableStream {
+public abstract class WritableMessage {
 
     protected static final Logger logger = Logger.getLogger("org.tini.common");
 
@@ -53,7 +53,7 @@ public abstract class WritableStream {
     final Sink sink;
     private boolean hasBody = false;
 
-    protected WritableStream(final Sink sink) {
+    protected WritableMessage(final Sink sink) {
         this.sink = sink;
     }
 

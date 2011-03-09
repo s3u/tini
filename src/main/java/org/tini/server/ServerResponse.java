@@ -14,7 +14,7 @@
 
 package org.tini.server;
 
-import org.tini.common.WritableStream;
+import org.tini.common.WritableMessage;
 import org.tini.parser.HttpCodecUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -33,7 +33,7 @@ import java.util.UUID;
  *
  * @author Subbu Allamaraju
  */
-public class ServerResponse extends WritableStream {
+public class ServerResponse extends WritableMessage {
 
     private int status = 200;
     private String message = "OK";

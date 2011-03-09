@@ -14,7 +14,7 @@
 
 package org.tini.client;
 
-import org.tini.common.WritableStream;
+import org.tini.common.WritableMessage;
 import org.tini.common.Sink;
 import org.tini.parser.HttpCodecUtil;
 import org.tini.parser.ResponseLine;
@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Subbu Allamaraju
  */
-public class ClientRequest extends WritableStream {
+public class ClientRequest extends WritableMessage {
 
     private final String host;
     private final int port;

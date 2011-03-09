@@ -22,14 +22,16 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ * A readable message consisting of headers, followed by body, followed by trailers.
+ *
  * @author Subbu Allamaraju
  */
-public class ReadableStream {
+public class ReadableMessage {
 
     // Message parser
     private final HttpParser parser;
 
-    protected ReadableStream(final HttpParser parser) {
+    protected ReadableMessage(final HttpParser parser) {
         this.parser = parser;
     }
 

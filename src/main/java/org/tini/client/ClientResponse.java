@@ -14,14 +14,14 @@
 
 package org.tini.client;
 
-import org.tini.common.ReadableStream;
+import org.tini.common.ReadableMessage;
 import org.tini.parser.ResponseLine;
 import org.tini.parser.ResponseParser;
 
 /**
  * @author Subbu Allamaraju
  */
-public class ClientResponse extends ReadableStream {
+public class ClientResponse extends ReadableMessage {
 
     private final ResponseLine responseLine;
 

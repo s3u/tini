@@ -28,7 +28,7 @@ public class Utils {
      * @param source source
      * @param dest dest
      */
-    public static void pump(final ReadableStream source, final WritableStream dest) {
+    public static void pump(final ReadableMessage source, final WritableMessage dest) {
         source.onData(new CompletionHandler<ByteBuffer, Void>() {
             @Override
             public void completed(final ByteBuffer result, final Void count) {

@@ -88,6 +88,7 @@ public class ClientConnection {
     public ClientRequest request(final String path, final String method) {
         assert method != null;
 
+        // Put the request in a pipeline
         final String p = path == null || path.equals("") ? "/" : path;
         return new ClientRequest(host, port, p, method, channel,
             new DirectSink(channel));

@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.tini.server;
+package org.tini.common;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousSocketChannel;
@@ -26,7 +26,7 @@ import java.util.logging.Logger;
  *
  * @author Subbu Allamaraju
  */
-// TODO: Revide design
+// TODO: Revise design - should handle both server and client
 final class IdleConnectionWatcher
 {
     private static final Logger logger = Logger.getLogger("org.tini.core");

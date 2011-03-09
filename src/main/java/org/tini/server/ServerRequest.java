@@ -14,7 +14,7 @@
 
 package org.tini.server;
 
-import org.tini.common.ReadableStream;
+import org.tini.common.ReadableMessage;
 import org.tini.parser.HttpParser;
 import org.tini.parser.RequestLine;
 
@@ -39,7 +39,7 @@ import java.util.Map;
  *
  * @author Subbu Allamaraju
  */
-public class ServerRequest extends ReadableStream {
+public class ServerRequest extends ReadableMessage {
 
     private final RequestLine requestLine;
     private Map<String, List<String>> headers = Collections.EMPTY_MAP;

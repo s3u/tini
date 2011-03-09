@@ -14,18 +14,10 @@
 
 package org.tini.common;
 
-import java.nio.ByteBuffer;
-import java.nio.channels.CompletionHandler;
-
 /**
+ * Pipelining support
+ *
  * @author Subbu Allamaraju
  */
-// TODO: This should be part of the WritableStream
-// - Queued chunk writing
-// - Message pipelining
-// - Message multiplexing
-public interface Sink {
-    void write(final ByteBuffer byteBuffer, CompletionHandler<Integer, Void> handler);
-    void end();
-    void closeWhenDone();
+public class WritablePipeline {
 }
