@@ -41,7 +41,7 @@ import java.util.logging.Logger;
  */
 public class RequestPipeline extends ReadablePipeline {
 
-    private static final Logger logger = Logger.getLogger("org.tini.core");
+    private static final Logger logger = Logger.getLogger("org.tini.server");
 
     // Parser to parse HTTP requests
     private final RequestParser parser;

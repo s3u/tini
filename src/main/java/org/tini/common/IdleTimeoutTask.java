@@ -29,7 +29,7 @@ import java.util.logging.Logger;
 // TODO: Revise design - should handle both server and client
 final class IdleConnectionWatcher
 {
-    private static final Logger logger = Logger.getLogger("org.tini.core");
+    private static final Logger logger = Logger.getLogger("org.tini.common");
 
     private final AtomicInteger readers = new AtomicInteger(0);
     private final AtomicInteger writers = new AtomicInteger(0);

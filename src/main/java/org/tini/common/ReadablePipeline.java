@@ -31,7 +31,7 @@ import java.util.logging.Logger;
  */
 public class ReadablePipeline {
 
-    private static final Logger logger = Logger.getLogger("org.tini.core");
+    private static final Logger logger = Logger.getLogger("org.tini.common");
 
     // Channel
     protected final AsynchronousSocketChannel channel;

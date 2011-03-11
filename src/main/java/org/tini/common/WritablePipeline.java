@@ -33,7 +33,7 @@ import java.util.logging.Logger;
 // TODO: Idle connection closing
 public class WritablePipeline implements Sink {
 
-    private static final Logger logger = Logger.getLogger("org.tini.core");
+    private static final Logger logger = Logger.getLogger("org.tini.common");
 
     // Close if explicitly asked for
     protected boolean closeWhenDone = false;

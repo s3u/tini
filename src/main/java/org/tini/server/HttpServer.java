@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  */
 public class HttpServer {
 
-    private static final Logger logger = Logger.getLogger("org.tini.core");
+    private static final Logger logger = Logger.getLogger("org.tini.server");
     private final Map<String, Object> handlers;
 
     private long readTimeout = 5;

@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  * @author Subbu Allamaraju
  */
 public class ResponseParser extends HttpParser {
-    private static final Logger logger = Logger.getLogger("org.tini.core.parser");
+    private static final Logger logger = Logger.getLogger("org.tini.parser");
 
     private final List<CompletionHandler<ResponseLine, Void>> onResponseLine = new ArrayList<CompletionHandler<ResponseLine, Void>>(1);
 
