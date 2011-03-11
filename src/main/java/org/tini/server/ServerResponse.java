@@ -50,7 +50,7 @@ public class ServerResponse extends WritableMessage {
         httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
-    protected ServerResponse(final WritablePipeline sink) throws InterruptedException {
+    protected ServerResponse(final WritablePipeline sink) {
         super(sink);
 
         chunkId = UUID.randomUUID().toString();
@@ -60,7 +60,7 @@ public class ServerResponse extends WritableMessage {
     }
 
     protected ServerResponse(final WritablePipeline sink,
-                             final ServerRequest request) throws InterruptedException {
+                             final ServerRequest request) {
         this(sink);
         this.request = request;
     }

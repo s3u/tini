@@ -31,19 +31,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * A pipeline is associated with a channel/connection. Since a client can send one or several
+ * <p>A pipeline is associated with a channel/connection. Since a client can send one or several
  * requests on a given connection, an instance of this class represents all the requests and
- * responses made on that connection.
+ * responses made on that connection.<p/>
  * <p/>
- * This class also manages connection lifecycle such as termination, and pipelining.
+ * <p>This class also manages connection lifecycle such as termination, and pipelining.</p>
  *
  * @author Subbu Allamaraju
  */
 public class RequestPipeline extends ReadablePipeline {
 
     private static final Logger logger = Logger.getLogger("org.tini.server");
-
-    // Parser to parse HTTP requests
     private final RequestParser parser;
 
     RequestPipeline(final AsynchronousSocketChannel channel,
@@ -59,19 +57,25 @@ public class RequestPipeline extends ReadablePipeline {
         parser = new RequestParser(channel, readTimeout, readTimeoutUnit);
     }
 
+    /**
+     * <p>Start processing the request pipeline and fill up the response pipeline.</p>
+     *
+     * @param writablePipeline response pipeline
+     */
     public void process(final WritablePipeline writablePipeline) {
         // For each request we need to register handlers.
         final Object[] pair = new Object[2];
 
+        // Find a new request line
         parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
             @Override
             public void completed(final RequestLine requestLine, final Void attachment) {
-                // Found a new request line
                 final ServerRequest request = new ServerRequest(parser, requestLine);
-                try {
                 final ServerResponse response = new ServerResponse(writablePipeline);
                 pair[0] = request;
                 pair[1] = response;
+                try {
+                    writablePipeline.push(response);
                 }
                 catch(InterruptedException ie) {
                     // TODO Ugly
@@ -82,15 +86,9 @@ public class RequestPipeline extends ReadablePipeline {
             @Override
             public void failed(final Throwable exc, final Void attachment) {
                 logger.log(Level.SEVERE, exc.getMessage(), exc);
-                try {
                 final ServerResponse response = new ServerResponse(writablePipeline);
                 response.setStatus(400, "Bad Request");
                 response.end();
-                }
-                catch(InterruptedException ie) {
-                    // TODO ugly
-                    ie.printStackTrace();
-                }
             }
         });
 

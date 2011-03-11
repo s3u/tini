@@ -58,10 +58,9 @@ public class ClientConnection {
      * @param host    host
      * @param port    port
      * @param handler handler
-     * @throws IOException when?
      */
     // TODO: Look from open connections for reuse
-    public void connect(final String host, final int port, final CompletionHandler<Void, Void> handler) throws IOException {
+    public void connect(final String host, final int port, final CompletionHandler<Void, Void> handler) {
         assert host != null;
         assert handler != null;
 
@@ -71,9 +70,14 @@ public class ClientConnection {
         final InetSocketAddress socketAddress = new InetSocketAddress(this.host, this.port);
 
         executorService = Executors.newCachedThreadPool();
-        channelGroup = AsynchronousChannelGroup.withCachedThreadPool(executorService, 1);
-        channel = AsynchronousSocketChannel.open(channelGroup);
-        channel.connect(socketAddress, null, handler);
+        try {
+            channelGroup = AsynchronousChannelGroup.withCachedThreadPool(executorService, 1);
+            channel = AsynchronousSocketChannel.open(channelGroup);
+            channel.connect(socketAddress, null, handler);
+        }
+        catch(IOException ioe) {
+            handler.failed(ioe, null);
+        }
     }
 
     /**

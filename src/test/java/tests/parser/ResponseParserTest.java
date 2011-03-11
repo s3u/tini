@@ -51,9 +51,7 @@ public class ResponseParserTest {
                 assertEquals(200, result.getCode());
                 assertEquals("OK", result.getStatus());
                 assertEquals("HTTP/1.1", result.getVersion());
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -66,9 +64,7 @@ public class ResponseParserTest {
             @Override
             public void completed(final Map<String, List<String>> result, final Void attachment) {
                 assertEquals(0, result.size());
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -76,16 +72,14 @@ public class ResponseParserTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 
@@ -108,9 +102,7 @@ public class ResponseParserTest {
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
         });
 
@@ -126,16 +118,14 @@ public class ResponseParserTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 
@@ -159,9 +149,7 @@ public class ResponseParserTest {
                 assertEquals(200, result.getCode());
                 assertEquals("OK", result.getStatus());
                 assertEquals("HTTP/1.1", result.getVersion());
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -179,9 +167,7 @@ public class ResponseParserTest {
                 assertEquals("v11", result.get("h1").get(1));
                 assertEquals(1, result.get("h2").size());
                 assertEquals("v2", result.get("h2").get(0));
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -189,16 +175,14 @@ public class ResponseParserTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 }

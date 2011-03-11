@@ -15,18 +15,29 @@
 package tests.parser;
 
 import org.junit.Test;
+import org.tini.client.ClientConnection;
+import org.tini.client.ClientRequest;
+import org.tini.client.ClientResponse;
 import org.tini.server.ServerRequest;
 import org.tini.server.ServerResponse;
 import org.tini.server.HttpServer;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
 import java.nio.channels.CompletionHandler;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
  * @author Subbu Allamaraju
  */
-// TODO
 public class KeepAliveServerTest {
 
     @Test
@@ -38,32 +49,30 @@ public class KeepAliveServerTest {
 
         final HttpServer server = HttpServer.createServer();
 
-        server.use(null, new Object() {
-            public void service(final ServerRequest request, final ServerResponse response) {
-                System.err.println("Received: " + request.getRequestLine().getMethod() + " for " + request.getRequestLine().getUri());
-                response.setContentType("text/plain; charset=UTF-8");
-                response.addHeader("Connection", "keep-alive");
-                response.addHeader("Transfer-Encoding", "chunked");
+        final List<String> paths = Arrays.asList("/foo", "/bar", "/baz");
+        for(final String path : paths) {
+            server.use(path, new Handler());
+        }
 
-                // Purposefully blocking to avoid concurrent handling of requests from an open
-                // connection.
-                final int id = Integer.parseInt(request.getRequestLine().getUri().substring(1));
-                try {
-                    Thread.sleep(1000/id);
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
-                }
-
-                response.write(request.getRequestLine().getUri());
-                response.end();
-            }
-        });
+        final CountDownLatch lock = new CountDownLatch(1);
 
         server.listen(3000, new CompletionHandler<Void, Void>() {
             @Override
             public void completed(final Void result, final Void attachment) {
-                // TODO Send requests using the async client API
+                final ClientConnection connection = new ClientConnection();
+                connection.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
+                    @Override
+                    public void completed(final Void result, final Void attachment) {
+                        System.err.println("---> connected");
+
+                        sendRequest(paths.iterator(), connection, lock);
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
             }
 
             @Override
@@ -73,7 +82,66 @@ public class KeepAliveServerTest {
             }
         });
 
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
+        }
     }
 
+    private void sendRequest(final Iterator<String> iterator, final ClientConnection connection, final CountDownLatch lock) {
+        if(!iterator.hasNext()) {
+            return;
+        }
+        final ClientRequest request = connection.request(iterator.next(), "GET");
+        request.onResponse(new CompletionHandler<ClientResponse, Void>() {
+            @Override
+            public void completed(final ClientResponse response, final Void attachment) {
+                System.err.println("---> got response");
+                final StringBuilder resp = new StringBuilder();
+                response.onData(new CompletionHandler<ByteBuffer, Void>() {
+                    @Override
+                    public void completed(final ByteBuffer result, final Void attachment) {
+                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                        resp.append(charBuffer);
+                        if(result.remaining() == 0) {
+                            assertEquals("GET /foo HTTP/1.1", resp.toString());
+                            lock.countDown();
 
+                            // Now need to start the next request
+                            sendRequest(iterator, connection, lock);
+                        }
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
+
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                exc.printStackTrace();
+            }
+        });
+        request.writeHead();
+    }
+
+    class Handler {
+        public void service(final ServerRequest request, final ServerResponse response) {
+            System.err.println("Received: " + request.getRequestLine().getMethod() + " for " + request.getRequestLine().getUri());
+            response.setContentType("text/plain; charset=UTF-8");
+            response.addHeader("Connection", "keep-alive");
+            response.addHeader("Transfer-Encoding", "chunked");
+
+            response.write(request.getRequestLine().toString());
+            response.end();
+        }
+    }
 }

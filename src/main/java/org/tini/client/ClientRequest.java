@@ -70,6 +70,7 @@ public class ClientRequest extends WritableMessage {
      *
      * @param onResponse handler
      */
+    // TODO: Why this handler?
     public void onResponse(final CompletionHandler<ClientResponse, Void> onResponse) {
         this.onResponse = onResponse;
     }
@@ -77,6 +78,7 @@ public class ClientRequest extends WritableMessage {
     /**
      * Writes the request line and headers and begins parsing the response.
      */
+    // TODO: Renamed - this is confusing
     public void writeHead() {
         if(!headers.containsKey("host")) {
             if(port == 80) {

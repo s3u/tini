@@ -23,7 +23,8 @@ import org.tini.server.ServerResponse;
 import org.tini.server.HttpServer;
 
 import javax.ws.rs.GET;
-import java.io.*;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.CompletionHandler;
@@ -72,73 +73,68 @@ public class AsyncClientTest {
 
                 final ClientConnection client = new ClientConnection();
                 final StringBuilder resp = new StringBuilder();
-                try {
-                    client.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
-                        @Override
-                        public void completed(final Void result, final Void attachment) {
-                            System.err.println("Connected");
-                            // Send a request
-                            final ClientRequest request = client.request("/", "GET");
-                            request.onResponse(new CompletionHandler<ClientResponse, Void>() {
-                                @Override
-                                public void completed(final ClientResponse response, final Void attachment) {
-                                    System.err.println(response.getResponseLine().getCode());
-                                    assertEquals(200, response.getResponseLine().getCode());
-                                    lock.countDown();
+                client.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
+                    @Override
+                    public void completed(final Void result, final Void attachment) {
+                        System.err.println("Connected");
+                        // Send a request
+                        final ClientRequest request = client.request("/", "GET");
+                        request.onResponse(new CompletionHandler<ClientResponse, Void>() {
+                            @Override
+                            public void completed(final ClientResponse response, final Void attachment) {
+                                System.err.println(response.getResponseLine().getCode());
+                                assertEquals(200, response.getResponseLine().getCode());
+                                lock.countDown();
 
-                                    response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                                        @Override
-                                        public void completed(final Map<String, List<String>> result, final Void attachment) {
-                                            System.err.println(result.size());
-                                            assertEquals(5, result.size());
+                                response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                                    @Override
+                                    public void completed(final Map<String, List<String>> result, final Void attachment) {
+                                        System.err.println(result.size());
+                                        assertEquals(5, result.size());
+                                        lock.countDown();
+                                    }
+
+                                    @Override
+                                    public void failed(final Throwable exc, final Void attachment) {
+                                        exc.printStackTrace();
+                                        fail();
+                                    }
+                                });
+                                response.onData(new CompletionHandler<ByteBuffer, Void>() {
+                                    @Override
+                                    public void completed(final ByteBuffer result, final Void attachment) {
+                                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                                        resp.append(charBuffer.toString());
+                                        if(result.remaining() == 0) {
+                                            assertEquals("hello world", resp.toString());
                                             lock.countDown();
                                         }
+                                    }
 
-                                        @Override
-                                        public void failed(final Throwable exc, final Void attachment) {
-                                            exc.printStackTrace();
-                                            fail();
-                                        }
-                                    });
-                                    response.onData(new CompletionHandler<ByteBuffer, Void>() {
-                                        @Override
-                                        public void completed(final ByteBuffer result, final Void attachment) {
-                                            final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                                            resp.append(charBuffer.toString());
-                                            if(result.remaining() == 0) {
-                                                assertEquals("hello world", resp.toString());
-                                                lock.countDown();
-                                            }
-                                        }
+                                    @Override
+                                    public void failed(final Throwable exc, final Void attachment) {
+                                        exc.printStackTrace();
+                                    }
+                                });
+                            }
 
-                                        @Override
-                                        public void failed(final Throwable exc, final Void attachment) {
-                                            exc.printStackTrace();
-                                        }
-                                    });
-                                }
+                            @Override
+                            public void failed(final Throwable exc, final Void attachment) {
+                                exc.printStackTrace();
+                            }
+                        });
+                        request.addHeader("Host", "localhost");
+                        request.writeHead();
+                        request.end();
+                        lock.countDown();
+                    }
 
-                                @Override
-                                public void failed(final Throwable exc, final Void attachment) {
-                                    exc.printStackTrace();
-                                }
-                            });
-                            request.addHeader("Host", "localhost");
-                            request.writeHead();
-                            request.end();
-                            lock.countDown();
-                        }
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
 
-                        @Override
-                        public void failed(final Throwable exc, final Void attachment) {
-                            exc.printStackTrace();
-                        }
-                    });
-                }
-                catch(IOException ioe) {
-                    ioe.printStackTrace();
-                    fail();
-                }
             }
 
             @Override
@@ -147,22 +143,20 @@ public class AsyncClientTest {
                 fail();
             }
         });
-        synchronized(lock) {
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
             try {
-                lock.await(10, TimeUnit.SECONDS);
+                server.shutdown();
             }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
+            catch(IOException ioe) {
+                ioe.printStackTrace();
             }
-            finally {
-                try {
-                    server.shutdown();
-                }
-                catch(IOException ioe) {
-                    ioe.printStackTrace();
-                }
-                assertEquals(0, lock.getCount());
-            }
+            assertEquals(0, lock.getCount());
         }
     }
 
@@ -192,66 +186,60 @@ public class AsyncClientTest {
                 lock.countDown();
 
                 final ClientConnection client = new ClientConnection();
-                try {
-                    client.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
-                        @Override
-                        public void completed(final Void result, final Void attachment) {
-                            // Send a request
-                            final ClientRequest request = client.request("/", "GET");
-                            request.onResponse(new CompletionHandler<ClientResponse, Void>() {
-                                @Override
-                                public void completed(final ClientResponse response, final Void attachment) {
-                                    response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                                        @Override
-                                        public void completed(final Map<String, List<String>> result, final Void attachment) {
-                                            assertEquals(5, result.size());
-                                            assertEquals(1, result.get("transfer-encoding").size());
-                                            assertEquals("chunked", result.get("transfer-encoding").get(0));
-                                            lock.countDown();
-                                        }
+                client.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
+                    @Override
+                    public void completed(final Void result, final Void attachment) {
+                        // Send a request
+                        final ClientRequest request = client.request("/", "GET");
+                        request.onResponse(new CompletionHandler<ClientResponse, Void>() {
+                            @Override
+                            public void completed(final ClientResponse response, final Void attachment) {
+                                response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                                    @Override
+                                    public void completed(final Map<String, List<String>> result, final Void attachment) {
+                                        assertEquals(5, result.size());
+                                        assertEquals(1, result.get("transfer-encoding").size());
+                                        assertEquals("chunked", result.get("transfer-encoding").get(0));
+                                        lock.countDown();
+                                    }
 
-                                        @Override
-                                        public void failed(final Throwable exc, final Void attachment) {
-                                            exc.printStackTrace();
-                                            fail();
-                                        }
-                                    });
-                                    response.onData(new CompletionHandler<ByteBuffer, Void>() {
-                                        @Override
-                                        public void completed(final ByteBuffer result, final Void attachment) {
-                                            // TODO
-                                        }
+                                    @Override
+                                    public void failed(final Throwable exc, final Void attachment) {
+                                        exc.printStackTrace();
+                                        fail();
+                                    }
+                                });
+                                response.onData(new CompletionHandler<ByteBuffer, Void>() {
+                                    @Override
+                                    public void completed(final ByteBuffer result, final Void attachment) {
+                                        // TODO
+                                    }
 
-                                        @Override
-                                        public void failed(final Throwable exc, final Void attachment) {
-                                            exc.printStackTrace();
-                                        }
-                                    });
-                                }
+                                    @Override
+                                    public void failed(final Throwable exc, final Void attachment) {
+                                        exc.printStackTrace();
+                                    }
+                                });
+                            }
 
-                                @Override
-                                public void failed(final Throwable exc, final Void attachment) {
-                                    exc.printStackTrace();
-                                }
-                            });
+                            @Override
+                            public void failed(final Throwable exc, final Void attachment) {
+                                exc.printStackTrace();
+                            }
+                        });
 
-                            request.addHeader("Host", "localhost");
-                            request.writeHead();
-                            request.end();
+                        request.addHeader("Host", "localhost");
+                        request.writeHead();
+                        request.end();
 
-                            lock.countDown();
-                        }
+                        lock.countDown();
+                    }
 
-                        @Override
-                        public void failed(final Throwable exc, final Void attachment) {
-                            exc.printStackTrace();
-                        }
-                    });
-                }
-                catch(IOException ioe) {
-                    ioe.printStackTrace();
-                    fail();
-                }
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
             }
 
             @Override
@@ -260,22 +248,20 @@ public class AsyncClientTest {
                 fail();
             }
         });
-        synchronized(lock) {
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
             try {
-                lock.await(10, TimeUnit.SECONDS);
+                server.shutdown();
             }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
+            catch(IOException ioe) {
+                ioe.printStackTrace();
             }
-            finally {
-                try {
-                    server.shutdown();
-                }
-                catch(IOException ioe) {
-                    ioe.printStackTrace();
-                }
-                assertEquals(0, lock.getCount());
-            }
+            assertEquals(0, lock.getCount());
         }
     }
 }

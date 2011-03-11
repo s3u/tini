@@ -49,13 +49,11 @@ public abstract class WritableMessage {
     protected static final Charset US_ASCII = Charset.forName("US-ASCII");
     protected static final byte[] LAST_CHUNK = "0\r\n\r\n".getBytes(US_ASCII);
 
-
     final Sink sink;
     private boolean hasBody = false;
 
-    protected WritableMessage(final Sink sink) throws InterruptedException {
+    protected WritableMessage(final Sink sink) {
         this.sink = sink;
-        sink.push(this);
     }
 
     /**

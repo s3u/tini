@@ -62,15 +62,11 @@ public class KeepAliveTest {
             public void completed(final RequestLine result, final Void attachment) {
                 if(lock.getCount() == 2) {
                     assertEquals("/0", result.getUri());
-                    synchronized(lock) {
-                        lock.countDown();
-                    }
+                    lock.countDown();
                 }
                 else if(lock.getCount() == 1) {
                     assertEquals("/1", result.getUri());
-                    synchronized(lock) {
-                        lock.countDown();
-                    }
+                    lock.countDown();
                 }
             }
 
@@ -79,16 +75,14 @@ public class KeepAliveTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 
@@ -113,9 +107,7 @@ public class KeepAliveTest {
         parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
             @Override
             public void completed(final ResponseLine result, final Void attachment) {
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -145,16 +137,14 @@ public class KeepAliveTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 
@@ -184,9 +174,7 @@ public class KeepAliveTest {
         parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
             @Override
             public void completed(final ResponseLine result, final Void attachment) {
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -201,15 +189,11 @@ public class KeepAliveTest {
                 if(lock.getCount() == 5) {
                     assertEquals(1, result.get("transfer-encoding").size());
                     assertEquals("chunked", result.get("transfer-encoding").get(0));
-                    synchronized(lock) {
-                        lock.countDown();
-                    }
+                    lock.countDown();
                 }
                 else if(lock.getCount() == 2) {
                     assertEquals(0, result.get("transfer-encoding").size());
-                    synchronized(lock) {
-                        lock.countDown();
-                    }
+                    lock.countDown();
                 }
             }
 
@@ -245,16 +229,14 @@ public class KeepAliveTest {
 
 
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 }

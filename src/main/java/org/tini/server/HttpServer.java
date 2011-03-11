@@ -39,13 +39,14 @@ import java.util.logging.Logger;
 public class HttpServer {
 
     private static final Logger logger = Logger.getLogger("org.tini.server");
+
+    // Application handlers
     private final Map<String, Object> handlers;
 
     private long readTimeout = 5;
     private TimeUnit readTimeoutUnit = TimeUnit.SECONDS;
     private long idleTimeout = 60;
     private TimeUnit idleTimeoutUnit = TimeUnit.SECONDS;
-
     private final Map<SocketOption, Object> options = new HashMap<SocketOption, Object>();
 
     /**
@@ -206,7 +207,7 @@ public class HttpServer {
     /**
      * Shutdown the server.
      *
-     * @throws IOException
+     * @throws IOException thrown in case of I/O errors
      */
     public void shutdown() throws IOException {
         if(channelGroup != null) {

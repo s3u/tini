@@ -77,16 +77,14 @@ public class ChunkedMessageTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 
@@ -116,9 +114,7 @@ public class ChunkedMessageTest {
                 assertEquals(200, result.getCode());
                 assertEquals("OK", result.getStatus());
                 assertEquals("HTTP/1.1", result.getVersion());
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -134,9 +130,7 @@ public class ChunkedMessageTest {
                 assertEquals("chunked", result.get("transfer-encoding").get(0));
                 assertEquals(1, result.get("trailer").size());
                 assertEquals("connection", result.get("trailer").get(0));
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -169,9 +163,7 @@ public class ChunkedMessageTest {
                 assertEquals(1, result.size());
                 assertEquals(1, result.get("connection").size());
                 assertEquals("close", result.get("connection").get(0));
-                synchronized(lock) {
-                    lock.countDown();
-                }
+                lock.countDown();
             }
 
             @Override
@@ -179,16 +171,14 @@ public class ChunkedMessageTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
         }
     }
 
@@ -440,17 +430,14 @@ public class ChunkedMessageTest {
             }
         });
         parser.readNext();
-        synchronized(lock) {
-            try {
-                lock.await(10, TimeUnit.SECONDS);
-            }
-            catch(InterruptedException ie) {
-                fail("Pending tests");
-            }
-            finally {
-                assertEquals(0, lock.getCount());
-            }
+        try {
+            lock.await(10, TimeUnit.SECONDS);
         }
-
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
+        }
     }
 }
