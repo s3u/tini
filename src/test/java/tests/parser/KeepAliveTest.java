@@ -57,30 +57,21 @@ public class KeepAliveTest {
 
         final CountDownLatch lock = new CountDownLatch(2);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
-                    @Override
-                    public void completed(final RequestLine result, final Void attachment) {
-                        if(lock.getCount() == 2) {
-                            assertEquals("/0", result.getUri());
-                            synchronized(lock) {
-                                lock.countDown();
-                            }
-                        }
-                        else if(lock.getCount() == 1) {
-                            assertEquals("/1", result.getUri());
-                            synchronized(lock) {
-                                lock.countDown();
-                            }
-                        }
+            public void completed(final RequestLine result, final Void attachment) {
+                if(lock.getCount() == 2) {
+                    assertEquals("/0", result.getUri());
+                    synchronized(lock) {
+                        lock.countDown();
                     }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
+                }
+                else if(lock.getCount() == 1) {
+                    assertEquals("/1", result.getUri());
+                    synchronized(lock) {
+                        lock.countDown();
                     }
-                });
+                }
             }
 
             @Override
@@ -119,47 +110,38 @@ public class KeepAliveTest {
 
         final CountDownLatch lock = new CountDownLatch(4);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
-                    @Override
-                    public void completed(final ResponseLine result, final Void attachment) {
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        exc.printStackTrace();
-                        fail();
-                    }
-                });
-
-                parser.onData(new CompletionHandler<ByteBuffer, Void>() {
-                    @Override
-                    public void completed(final ByteBuffer result, final Void attachment) {
-                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                        if(lock.getCount() == 3) {
-                            assertEquals("hello", charBuffer.toString());
-                            lock.countDown();
-                        }
-                        else if(lock.getCount() == 1) {
-                            assertEquals("HELLO", charBuffer.toString());
-                            lock.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        fail();
-                    }
-                });
+            public void completed(final ResponseLine result, final Void attachment) {
+                synchronized(lock) {
+                    lock.countDown();
+                }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
+                exc.printStackTrace();
+                fail();
+            }
+        });
+
+        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
+            @Override
+            public void completed(final ByteBuffer result, final Void attachment) {
+                final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                if(lock.getCount() == 3) {
+                    assertEquals("hello", charBuffer.toString());
+                    lock.countDown();
+                }
+                else if(lock.getCount() == 1) {
+                    assertEquals("HELLO", charBuffer.toString());
+                    lock.countDown();
+                }
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                fail();
             }
         });
         parser.readNext();
@@ -199,76 +181,69 @@ public class KeepAliveTest {
 
         final CountDownLatch lock = new CountDownLatch(6);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
-                    @Override
-                    public void completed(final ResponseLine result, final Void attachment) {
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        fail();
-                    }
-                });
-
-                parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        if(lock.getCount() == 5) {
-                            assertEquals(1, result.get("transfer-encoding").size());
-                            assertEquals("chunked", result.get("transfer-encoding").get(0));
-                            synchronized(lock) {
-                                lock.countDown();
-                            }
-                        }
-                        else if(lock.getCount() == 2) {
-                            assertEquals(0, result.get("transfer-encoding").size());
-                            synchronized(lock) {
-                                lock.countDown();
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        fail();
-                    }
-                });
-
-                parser.onData(new CompletionHandler<ByteBuffer, Void>() {
-                    @Override
-                    public void completed(final ByteBuffer result, final Void attachment) {
-                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                        if(lock.getCount() == 4) {
-                            assertEquals("11111", charBuffer.toString());
-                            lock.countDown();
-                        }
-                        else if(lock.getCount() == 3) {
-                            assertEquals("2222222222", charBuffer.toString());
-                            lock.countDown();
-                        }
-                        else if(lock.getCount() == 1) {
-                            assertEquals("HELLO", charBuffer.toString());
-                            lock.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        fail();
-                    }
-                });
+            public void completed(final ResponseLine result, final Void attachment) {
+                synchronized(lock) {
+                    lock.countDown();
+                }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
+                fail();
             }
         });
+
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                if(lock.getCount() == 5) {
+                    assertEquals(1, result.get("transfer-encoding").size());
+                    assertEquals("chunked", result.get("transfer-encoding").get(0));
+                    synchronized(lock) {
+                        lock.countDown();
+                    }
+                }
+                else if(lock.getCount() == 2) {
+                    assertEquals(0, result.get("transfer-encoding").size());
+                    synchronized(lock) {
+                        lock.countDown();
+                    }
+                }
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                fail();
+            }
+        });
+
+        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
+            @Override
+            public void completed(final ByteBuffer result, final Void attachment) {
+                final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                if(lock.getCount() == 4) {
+                    assertEquals("11111", charBuffer.toString());
+                    lock.countDown();
+                }
+                else if(lock.getCount() == 3) {
+                    assertEquals("2222222222", charBuffer.toString());
+                    lock.countDown();
+                }
+                else if(lock.getCount() == 1) {
+                    assertEquals("HELLO", charBuffer.toString());
+                    lock.countDown();
+                }
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                fail();
+            }
+        });
+
+
         parser.readNext();
         synchronized(lock) {
             try {

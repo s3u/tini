@@ -35,17 +35,7 @@ public class RequestParserTest {
         final MockAsyncSocketChannel channel = new MockAsyncSocketChannel(bais);
 
         final RequestParser parser = new RequestParser(channel, 100, TimeUnit.SECONDS);
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
-            @Override
-            public void completed(final Void result, final Void attachment) {
-
-            }
-
-            @Override
-            public void failed(final Throwable exc, final Void attachment) {
-
-            }
-        });
+        // TODO
     }
 
     @Test
@@ -59,38 +49,29 @@ public class RequestParserTest {
 
         final CountDownLatch lock = new CountDownLatch(1);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
-                    @Override
-                    public void completed(final RequestLine result, final Void attachment) {
-                        fail("Should fail");
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
-                });
-
-                parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        fail("Should fail");
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        fail("Should fail");
-                    }
-                });
+            public void completed(final RequestLine result, final Void attachment) {
+                fail("Should fail");
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
+                synchronized(lock) {
+                    lock.countDown();
+                }
+            }
+        });
+
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                fail("Should fail");
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                fail("Should fail");
             }
         });
         parser.readNext();
@@ -121,44 +102,35 @@ public class RequestParserTest {
 
         final CountDownLatch lock = new CountDownLatch(2);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
-                    @Override
-                    public void completed(final RequestLine result, final Void attachment) {
-                        assertEquals("GET", result.getMethod());
-                        assertEquals("/", result.getUri());
-                        assertEquals("HTTP/1.1", result.getVersion());
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
+            public void completed(final RequestLine result, final Void attachment) {
+                assertEquals("GET", result.getMethod());
+                assertEquals("/", result.getUri());
+                assertEquals("HTTP/1.1", result.getVersion());
+                synchronized(lock) {
+                    lock.countDown();
+                }
+            }
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        exc.printStackTrace();
-                    }
-                });
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                exc.printStackTrace();
+            }
+        });
 
-                parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        assertEquals(2, result.size());
-                        assertEquals(2, result.get("h1").size());
-                        assertEquals("v1", result.get("h1").get(0));
-                        assertEquals("v11", result.get("h1").get(1));
-                        assertEquals(1, result.get("h2").size());
-                        assertEquals("v2", result.get("h2").get(0));
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                assertEquals(2, result.size());
+                assertEquals(2, result.get("h1").size());
+                assertEquals("v1", result.get("h1").get(0));
+                assertEquals("v11", result.get("h1").get(1));
+                assertEquals(1, result.get("h2").size());
+                assertEquals("v2", result.get("h2").get(0));
+                synchronized(lock) {
+                    lock.countDown();
+                }
             }
 
             @Override
@@ -192,54 +164,45 @@ public class RequestParserTest {
 
         final CountDownLatch lock = new CountDownLatch(3);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
-                    @Override
-                    public void completed(final RequestLine result, final Void attachment) {
-                        assertEquals("GET", result.getMethod());
-                        assertEquals("/", result.getUri());
-                        assertEquals("HTTP/1.1", result.getVersion());
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
+            public void completed(final RequestLine result, final Void attachment) {
+                assertEquals("GET", result.getMethod());
+                assertEquals("/", result.getUri());
+                assertEquals("HTTP/1.1", result.getVersion());
+                synchronized(lock) {
+                    lock.countDown();
+                }
+            }
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        exc.printStackTrace();
-                    }
-                });
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                exc.printStackTrace();
+            }
+        });
 
-                parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        assertEquals(1, result.size());
-                        assertEquals(1, result.get("content-length").size());
-                        assertEquals("5", result.get("content-length").get(0));
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                assertEquals(1, result.size());
+                assertEquals(1, result.get("content-length").size());
+                assertEquals("5", result.get("content-length").get(0));
+                synchronized(lock) {
+                    lock.countDown();
+                }
+            }
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+            }
+        });
 
-                parser.onData(new CompletionHandler<ByteBuffer, Void>() {
-                    @Override
-                    public void completed(final ByteBuffer result, final Void attachment) {
-                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                        assertEquals("hello", charBuffer.toString());
-                        lock.countDown();
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
+            @Override
+            public void completed(final ByteBuffer result, final Void attachment) {
+                final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                assertEquals("hello", charBuffer.toString());
+                lock.countDown();
             }
 
             @Override

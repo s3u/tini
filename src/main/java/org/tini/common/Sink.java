@@ -25,7 +25,9 @@ import java.nio.channels.CompletionHandler;
 // - Message pipelining
 // - Message multiplexing
 public interface Sink {
-    void write(final ByteBuffer byteBuffer, CompletionHandler<Integer, Void> handler);
-    void end();
+    void push(WritableMessage source) throws InterruptedException;
+
+    void write(final WritableMessage message, final ByteBuffer byteBuffer, CompletionHandler<Integer, Void> handler);
+    void end(final WritableMessage message);
     void closeWhenDone();
 }

@@ -58,32 +58,22 @@ public class ChunkedMessageTest {
 
         final CountDownLatch lock = new CountDownLatch(2);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                parser.onData(new CompletionHandler<ByteBuffer, Void>() {
-                    @Override
-                    public void completed(final ByteBuffer result, final Void attachment) {
-                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                        if(lock.getCount() == 2) {
-                            assertEquals("11111", charBuffer.toString());
-                            lock.countDown();
-                        }
-                        else if(lock.getCount() == 1) {
-                            assertEquals("2222222222", charBuffer.toString());
-                            lock.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+            public void completed(final ByteBuffer result, final Void attachment) {
+                final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                if(lock.getCount() == 2) {
+                    assertEquals("11111", charBuffer.toString());
+                    lock.countDown();
+                }
+                else if(lock.getCount() == 1) {
+                    assertEquals("2222222222", charBuffer.toString());
+                    lock.countDown();
+                }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-
             }
         });
         parser.readNext();
@@ -120,78 +110,68 @@ public class ChunkedMessageTest {
 
         final CountDownLatch lock = new CountDownLatch(5);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
+            public void completed(final ResponseLine result, final Void attachment) {
+                assertEquals(200, result.getCode());
+                assertEquals("OK", result.getStatus());
+                assertEquals("HTTP/1.1", result.getVersion());
+                synchronized(lock) {
+                    lock.countDown();
+                }
+            }
 
-                parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
-                    @Override
-                    public void completed(final ResponseLine result, final Void attachment) {
-                        assertEquals(200, result.getCode());
-                        assertEquals("OK", result.getStatus());
-                        assertEquals("HTTP/1.1", result.getVersion());
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+            }
+        });
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                assertEquals(2, result.size());
+                assertEquals(1, result.get("transfer-encoding").size());
+                assertEquals("chunked", result.get("transfer-encoding").get(0));
+                assertEquals(1, result.get("trailer").size());
+                assertEquals("connection", result.get("trailer").get(0));
+                synchronized(lock) {
+                    lock.countDown();
+                }
+            }
 
-                parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        assertEquals(2, result.size());
-                        assertEquals(1, result.get("transfer-encoding").size());
-                        assertEquals("chunked", result.get("transfer-encoding").get(0));
-                        assertEquals(1, result.get("trailer").size());
-                        assertEquals("connection", result.get("trailer").get(0));
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+            }
+        });
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
+            @Override
+            public void completed(final ByteBuffer result, final Void attachment) {
+                final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                if(lock.getCount() == 3) {
+                    assertEquals("11111", charBuffer.toString());
+                    lock.countDown();
+                }
+                else if(lock.getCount() == 2) {
+                    assertEquals("2222222222", charBuffer.toString());
+                    lock.countDown();
+                }
+            }
 
-                parser.onData(new CompletionHandler<ByteBuffer, Void>() {
-                    @Override
-                    public void completed(final ByteBuffer result, final Void attachment) {
-                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                        if(lock.getCount() == 3) {
-                            assertEquals("11111", charBuffer.toString());
-                            lock.countDown();
-                        }
-                        else if(lock.getCount() == 2) {
-                            assertEquals("2222222222", charBuffer.toString());
-                            lock.countDown();
-                        }
-                    }
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+            }
+        });
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
-
-                parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        assertEquals(1, result.size());
-                        assertEquals(1, result.get("connection").size());
-                        assertEquals("close", result.get("connection").get(0));
-                        synchronized(lock) {
-                            lock.countDown();
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                assertEquals(1, result.size());
+                assertEquals(1, result.get("connection").size());
+                assertEquals("close", result.get("connection").get(0));
+                synchronized(lock) {
+                    lock.countDown();
+                }
             }
 
             @Override
@@ -407,62 +387,52 @@ public class ChunkedMessageTest {
 
         final AtomicInteger size = new AtomicInteger(0);
 
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+        parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
+            public void completed(final ResponseLine result, final Void attachment) {
+                assertEquals(200, result.getCode());
+                assertEquals("OK", result.getStatus());
+                assertEquals("HTTP/1.1", result.getVersion());
+                lock.countDown();
+            }
 
-                parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
-                    @Override
-                    public void completed(final ResponseLine result, final Void attachment) {
-                        assertEquals(200, result.getCode());
-                        assertEquals("OK", result.getStatus());
-                        assertEquals("HTTP/1.1", result.getVersion());
-                        lock.countDown();
-                    }
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+            }
+        });
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                assertEquals(11, result.size());
+                lock.countDown();
+            }
 
-                parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        assertEquals(11, result.size());
-                        lock.countDown();
-                    }
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+            }
+        });
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
+            @Override
+            public void completed(final ByteBuffer result, final Void attachment) {
+                size.addAndGet(result.remaining());
+                if(result.remaining() == 0) {
+                    assertEquals(10367, size.get());
+                    lock.countDown();
+                }
+            }
 
-                parser.onData(new CompletionHandler<ByteBuffer, Void>() {
-                    @Override
-                    public void completed(final ByteBuffer result, final Void attachment) {
-                        size.addAndGet(result.remaining());
-                        if(result.remaining() == 0) {
-                            assertEquals(10367, size.get());
-                            lock.countDown();
-                        }
-                    }
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+            }
+        });
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
-
-                parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        assertEquals(0, result.size());
-                        lock.countDown();
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                    }
-                });
+        parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                assertEquals(0, result.size());
+                lock.countDown();
             }
 
             @Override

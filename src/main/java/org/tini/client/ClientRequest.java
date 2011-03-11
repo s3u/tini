@@ -56,7 +56,7 @@ public class ClientRequest extends WritableMessage {
                   final String path,
                   final String method,
                   final AsynchronousSocketChannel channel,
-                  final Sink sink) {
+                  final Sink sink) throws InterruptedException {
         super(sink);
         this.host = host;
         this.port = port;

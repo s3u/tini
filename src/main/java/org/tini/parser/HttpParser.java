@@ -91,15 +91,6 @@ public abstract class HttpParser {
     }
 
     /**
-     * @param beforeNext a handler to register message handlers - note that after each
-     *                   request/response, the parser clears message handlers, and hence the caller
-     *                   needs to re-register them.
-     */
-    public void beforeReadNext(final CompletionHandler<Void, Void> beforeNext) {
-        this.beforeNext = beforeNext;
-    }
-
-    /**
      * Clear handlers before parsing a request/response message.
      */
     protected void clearHandlers() {

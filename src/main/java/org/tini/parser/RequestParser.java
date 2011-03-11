@@ -45,12 +45,6 @@ public class RequestParser extends HttpParser {
     }
 
     public void readNext() {
-        super.clearHandlers();
-        onRequestLine.clear();
-
-        // Let the caller register new handlers
-        beforeNext.completed(null, null);
-
         findRequestLine();
     }
 

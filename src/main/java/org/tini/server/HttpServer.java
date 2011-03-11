@@ -14,6 +14,8 @@
 
 package org.tini.server;
 
+import org.tini.common.WritablePipeline;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketOption;
@@ -167,16 +169,13 @@ public class HttpServer {
                     logger.info("Client connected");
                     server.accept(null, this);
 
-                    // Create a pipeline, and let it go.
-                    final RequestPipeline pipeline = new RequestPipeline(channel, options, handlers,
-                        idleTimeout, idleTimeoutUnit,
-                        readTimeout, readTimeoutUnit);
-                    try {
-                        pipeline.process();
-                    }
-                    catch(Throwable e) {
-                        logger.log(Level.WARNING, e.getMessage(), e);
-                    }
+                    // Create pipelines and parser
+                    final RequestPipeline requestPipeline = new RequestPipeline(channel, options, handlers,
+                        idleTimeout, idleTimeoutUnit, readTimeout, readTimeoutUnit);
+                    final WritablePipeline responsePipeline = new WritablePipeline(channel);
+
+                    // Process requests from the pipeline
+                    requestPipeline.process(responsePipeline);
                 }
 
                 public void failed(final Throwable e, final Void attachment) {

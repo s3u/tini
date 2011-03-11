@@ -15,6 +15,7 @@
 package org.tini.server;
 
 import org.tini.common.WritableMessage;
+import org.tini.common.WritablePipeline;
 import org.tini.parser.HttpCodecUtil;
 
 import java.io.ByteArrayOutputStream;
@@ -49,7 +50,7 @@ public class ServerResponse extends WritableMessage {
         httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
-    protected ServerResponse(final RequestPipeline.ChannelWriter sink) {
+    protected ServerResponse(final WritablePipeline sink) throws InterruptedException {
         super(sink);
 
         chunkId = UUID.randomUUID().toString();
@@ -58,8 +59,8 @@ public class ServerResponse extends WritableMessage {
         this.headers.put("Date", httpDateFormat.format(new Date()));
     }
 
-    protected ServerResponse(final RequestPipeline.ChannelWriter sink,
-                             final ServerRequest request) {
+    protected ServerResponse(final WritablePipeline sink,
+                             final ServerRequest request) throws InterruptedException {
         this(sink);
         this.request = request;
     }

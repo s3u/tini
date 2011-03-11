@@ -53,8 +53,9 @@ public abstract class WritableMessage {
     final Sink sink;
     private boolean hasBody = false;
 
-    protected WritableMessage(final Sink sink) {
+    protected WritableMessage(final Sink sink) throws InterruptedException {
         this.sink = sink;
+        sink.push(this);
     }
 
     /**
@@ -123,7 +124,7 @@ public abstract class WritableMessage {
             if(isChunked) {
                 baos.write(HttpCodecUtil.CRLF);
             }
-            sink.write(ByteBuffer.wrap(baos.toByteArray()), null);
+            sink.write(this, ByteBuffer.wrap(baos.toByteArray()), null);
         }
         catch(IOException ioe) {
             // ByteArrayOutputStream does not throw this
@@ -157,9 +158,9 @@ public abstract class WritableMessage {
                 }
             }
             if(baos.size() > 0) {
-                sink.write(ByteBuffer.wrap(baos.toByteArray()), null);
+                sink.write(this, ByteBuffer.wrap(baos.toByteArray()), null);
             }
-            sink.end();
+            sink.end(this);
             hasEnded = true;
         }
         finally {
@@ -187,7 +188,7 @@ public abstract class WritableMessage {
 
     public void writeHead(final CompletionHandler<Integer, Void> handler) {
         final ByteArrayOutputStream baos = writeHead(doClose());
-        sink.write(ByteBuffer.wrap(baos.toByteArray()), handler);
+        sink.write(this, ByteBuffer.wrap(baos.toByteArray()), handler);
     }
 
     private ByteArrayOutputStream writeHead(final boolean doClose) {

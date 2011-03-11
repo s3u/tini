@@ -15,10 +15,10 @@
 package org.tini.server;
 
 import org.tini.common.ReadablePipeline;
+import org.tini.common.WritablePipeline;
 import org.tini.parser.RequestLine;
 import org.tini.parser.RequestParser;
 
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.SocketOption;
@@ -46,18 +46,6 @@ public class RequestPipeline extends ReadablePipeline {
     // Parser to parse HTTP requests
     private final RequestParser parser;
 
-//    // Pending responses for pipelined requests.
-//    private final BlockingQueue<ChannelWriter> pipeline;
-
-//    // Watch for idle connections
-//    private final IdleConnectionWatcher idleWatcher;
-//
-    // Close if explicitly asked for
-//    private boolean closeWhenDone = false;
-
-    // Handlers
-//    private final Map<String, Object> handlers;
-
     RequestPipeline(final AsynchronousSocketChannel channel,
                     final Map<SocketOption, Object> options,
                     final Map<String, Object> handlers,
@@ -67,97 +55,68 @@ public class RequestPipeline extends ReadablePipeline {
                     final TimeUnit readTimeoutUnit) {
 
         super(channel, options, handlers, idleTimeout, idleTimeoutUnit, readTimeout, readTimeoutUnit);
-//        pipeline = new LinkedBlockingQueue<ChannelWriter>();
-//        idleWatcher = new IdleConnectionWatcher(channel, idleTimeoutUnit.toMillis(idleTimeout));
-
-        try {
-            for(final SocketOption option : options.keySet()) {
-                channel.setOption(option, options.get(option));
-            }
-        }
-        catch(IOException ioe) {
-            logger.log(Level.SEVERE, ioe.getMessage(), ioe);
-            try {
-                channel.close();
-            }
-            catch(IOException e) {
-                logger.log(Level.WARNING, e.getMessage(), e);
-            }
-        }
 
         parser = new RequestParser(channel, readTimeout, readTimeoutUnit);
     }
 
-    /**
-     * Process the request pipeline. The pipeline may contain several HTTP requests.
-     */
-    public void process() {
-        parser.beforeReadNext(new CompletionHandler<Void, Void>() {
+    public void process(final WritablePipeline writablePipeline) {
+        // For each request we need to register handlers.
+        final Object[] pair = new Object[2];
+
+        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
             @Override
-            public void completed(final Void result, final Void attachment) {
-                // For each request we need to register handlers.
-                final Object[] pair = new Object[2];
-                parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
-                    @Override
-                    public void completed(final RequestLine result, final Void attachment) {
-                        final ServerRequest request = new ServerRequest(parser, result);
-                        final ChannelWriter sink = new ChannelWriter();
-                        final ServerResponse response = new ServerResponse(sink, request);
-                        pair[0] = request;
-                        pair[1] = response;
-                        try {
-                            pipeline.put(sink);
-                        }
-                        catch(InterruptedException ie) {
-                            logger.log(Level.WARNING, ie.getMessage(), ie);
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        logger.log(Level.SEVERE, exc.getMessage(), exc);
-                        final ChannelWriter sink = new ChannelWriter();
-                        try {
-                            pipeline.put(sink);
-                        }
-                        catch(InterruptedException ie) {
-                            logger.log(Level.WARNING, ie.getMessage(), ie);
-                            return;
-                        }
-                        final ServerResponse response = new ServerResponse(sink);
-                        response.setStatus(400, "Bad Request");
-                        response.end();
-                    }
-                });
-
-                parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-                    @Override
-                    public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        final ServerRequest request = (ServerRequest) pair[0];
-                        final ServerResponse response = (ServerResponse) pair[1];
-                        if("close".equals(request.getHeader("connection"))) {
-                            closeWhenDone = true;
-                        }
-                        request.setHeaders(result);
-
-                        // Invoke the app
-                        invokeApp(request, response, handlers);
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        final ServerResponse response = (ServerResponse) pair[1];
-                        logger.log(Level.SEVERE, exc.getMessage(), exc);
-                        response.setStatus(500, "Internal Server Error");
-                        response.end();
-                    }
-                });
+            public void completed(final RequestLine requestLine, final Void attachment) {
+                // Found a new request line
+                final ServerRequest request = new ServerRequest(parser, requestLine);
+                try {
+                final ServerResponse response = new ServerResponse(writablePipeline);
+                pair[0] = request;
+                pair[1] = response;
+                }
+                catch(InterruptedException ie) {
+                    // TODO Ugly
+                    ie.printStackTrace();
+                }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
+                logger.log(Level.SEVERE, exc.getMessage(), exc);
+                try {
+                final ServerResponse response = new ServerResponse(writablePipeline);
+                response.setStatus(400, "Bad Request");
+                response.end();
+                }
+                catch(InterruptedException ie) {
+                    // TODO ugly
+                    ie.printStackTrace();
+                }
             }
         });
+
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                final ServerRequest request = (ServerRequest) pair[0];
+                final ServerResponse response = (ServerResponse) pair[1];
+                if("close".equals(request.getHeader("connection"))) {
+                    writablePipeline.closeWhenDone();
+                }
+                request.setHeaders(result);
+
+                // Invoke the app
+                invokeApp(request, response, handlers);
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                final ServerResponse response = (ServerResponse) pair[1];
+                logger.log(Level.SEVERE, exc.getMessage(), exc);
+                response.setStatus(500, "Internal Server Error");
+                response.end();
+            }
+        });
+
         parser.readNext();
     }
 

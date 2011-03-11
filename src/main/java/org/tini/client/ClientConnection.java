@@ -15,6 +15,7 @@
 package org.tini.client;
 
 import org.tini.common.Sink;
+import org.tini.common.WritableMessage;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -90,13 +91,19 @@ public class ClientConnection {
 
         // Put the request in a pipeline
         final String p = path == null || path.equals("") ? "/" : path;
-        return new ClientRequest(host, port, p, method, channel,
-            new DirectSink(channel));
+        try {
+            return new ClientRequest(host, port, p, method, channel,
+                new DirectSink(channel));
+        }
+        catch(InterruptedException ie) {
+            // TODO: Ugly - fix
+            throw new RuntimeException(ie);
+        }
     }
 
     /**
      * <p>Creates an HTTP request for the given path (or request URI) and the HTTP method, and headers. <p/>
-     *
+     * <p/>
      * <p>Until the {@link ClientRequest#write(byte[])} or {@link
      * org.tini.client.ClientRequest#writeHead()} is called, no data will be written to the
      * connection.</p>
@@ -106,7 +113,7 @@ public class ClientConnection {
      * @param headers headers
      * @return request object
      */
-    public ClientRequest request(final String path, final String method, final Map<String, List<String>> headers) {
+    public ClientRequest request(final String path, final String method, final Map<String, List<String>> headers) throws InterruptedException {
         final ClientRequest request = request(path, method);
 
         // Copy headers to the origin
@@ -150,8 +157,13 @@ public class ClientConnection {
         }
 
         @Override
+        public void push(final WritableMessage source) throws InterruptedException {
+            // no-op
+        }
+
+        @Override
         // TODO Write to a queue
-        public void write(final ByteBuffer byteBuffer, final CompletionHandler<Integer, Void> handler) {
+        public void write(final WritableMessage message, final ByteBuffer byteBuffer, final CompletionHandler<Integer, Void> handler) {
             if(handler != null) {
                 channel.write(byteBuffer, null, handler);
             }
@@ -166,7 +178,7 @@ public class ClientConnection {
         }
 
         @Override
-        public void end() {
+        public void end(final WritableMessage message) {
         }
 
         @Override
