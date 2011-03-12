@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package tests.parser;
+package tests.client;
 
 import org.junit.Test;
 import org.tini.client.ClientConnection;

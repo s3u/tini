@@ -45,12 +45,12 @@ public class ClientRequest extends WritableMessage {
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
      *
-     * @param host   host
-     * @param port   port
-     * @param path   request uri or path
-     * @param method method
+     * @param host    host
+     * @param port    port
+     * @param path    request uri or path
+     * @param method  method
      * @param channel channel
-     * @param sink   sink to write response
+     * @param sink    sink to write response
      */
     ClientRequest(final String host, final int port,
                   final String path,
@@ -78,7 +78,7 @@ public class ClientRequest extends WritableMessage {
     /**
      * Writes the request line and headers and begins parsing the response.
      */
-    // TODO: Renamed - this is confusing
+    // TODO: Rename - this is confusing
     public void writeHead() {
         if(!headers.containsKey("host")) {
             if(port == 80) {
@@ -101,7 +101,7 @@ public class ClientRequest extends WritableMessage {
 
                     @Override
                     public void failed(final Throwable exc, final Void attachment) {
-                        // TODO
+                        onResponse.failed(exc, attachment);
                     }
                 });
 
@@ -110,6 +110,7 @@ public class ClientRequest extends WritableMessage {
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
+                // TODO:
                 exc.printStackTrace();
             }
         });

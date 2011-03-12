@@ -82,6 +82,7 @@ final class IdleConnectionWatcher
                     channel.close();
                 }
                 catch(IOException ioe) {
+                    // TODO:
                     ioe.printStackTrace();
                 }
             }

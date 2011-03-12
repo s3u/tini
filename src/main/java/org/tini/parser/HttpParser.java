@@ -54,12 +54,10 @@ public abstract class HttpParser {
     private final long timeout;
     private final TimeUnit timeUnit;
     private final AtomicInteger bytesRemaining;
-    private static final ByteBuffer EMPTY_BUFFER= ByteBuffer.wrap(new byte[0]);
+    private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.wrap(new byte[0]);
 
     // TODO: HTTP messages are parsed sequentially for now. Check concurrency issues.
 
-    // Handler
-    protected CompletionHandler<Void, Void> beforeNext;
     private final List<CompletionHandler<Map<String, List<String>>, Void>> onHeaders =
         new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
     private CompletionHandler<ByteBuffer, Void> onData = new ReadingCompletionHandler();
@@ -111,7 +109,7 @@ public abstract class HttpParser {
 
     /**
      * <p>Registers a handler to receive the message body as zero or several chunks.</p>
-     *
+     * <p/>
      * <p>To avoid buffering, this parser supports only one handler per message.</p>
      *
      * @param handler handler
@@ -524,6 +522,7 @@ public abstract class HttpParser {
 
             @Override
             public void failed(final Throwable exc, final Object attachment) {
+                // TODO:
                 exc.printStackTrace();
             }
         });

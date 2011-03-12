@@ -176,6 +176,7 @@ public class ClientConnection {
                     channel.write(byteBuffer);
                 }
                 catch(Throwable t) {
+                    // TODO:
                     t.printStackTrace();
                 }
             }

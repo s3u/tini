@@ -28,15 +28,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyKeepAliveClient {
 
-    private String host;
-    private int port;
+    final private String host;
+    final private int port;
 
     private ChannelFactory factory;
     private ClientHandler handler;
 
     private static final int MAXREQ = 1000;
 
-    public NettyKeepAliveClient(String host, int port) {
+    public NettyKeepAliveClient(final String host, final int port) {
         this.host = host;
         this.port = port;
     }
@@ -45,11 +45,11 @@ public class NettyKeepAliveClient {
         this.factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(),
             Executors.newCachedThreadPool());
         this.handler = new ClientHandler();
-        ClientBootstrap bootstrap = new ClientBootstrap(this.factory);
+        final ClientBootstrap bootstrap = new ClientBootstrap(this.factory);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             @Override
             public ChannelPipeline getPipeline() throws Exception {
-                ChannelPipeline pipeline = Channels.pipeline();
+                final ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("codec", new HttpClientCodec());
                 pipeline.addLast("aggregator", new HttpChunkAggregator(10000));
                 pipeline.addLast("handler", handler);
@@ -57,7 +57,7 @@ public class NettyKeepAliveClient {
             }
         });
 
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(this.host, this.port));
+        final ChannelFuture future = bootstrap.connect(new InetSocketAddress(this.host, this.port));
         return future.awaitUninterruptibly().isSuccess();
     }
 
@@ -83,20 +83,20 @@ public class NettyKeepAliveClient {
         }
 
         @Override
-        public void channelConnected(ChannelHandlerContext ctx,
-                                     ChannelStateEvent e) throws Exception {
+        public void channelConnected(final ChannelHandlerContext ctx,
+                                     final ChannelStateEvent e) throws Exception {
             System.out.println("Channel to server open: " + e.getChannel());
             this.channel = e.getChannel();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+        public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e)
             throws Exception {
-            HttpResponse response = (HttpResponse) e.getMessage();
-            String val = response.getHeader("connection");
-            String body = response.getContent().toString(CharsetUtil.UTF_8).trim();
+            final HttpResponse response = (HttpResponse) e.getMessage();
+            final String val = response.getHeader("connection");
+            final String body = response.getContent().toString(CharsetUtil.UTF_8).trim();
             System.err.println(body.length() + ": " + body.trim());
-            int number = Integer.parseInt(body.substring(1));
+            final int number = Integer.parseInt(body.substring(1));
 
             if(this.lastReceived != null) {
                 if(number <= this.lastReceived.getAndIncrement()) {
@@ -128,20 +128,20 @@ public class NettyKeepAliveClient {
         }
 
         // public methods ----------------------------------------------------
-        public void sendRequest(boolean close) {
+        public void sendRequest(final boolean close) {
             if((this.channel == null) || !this.channel.isConnected()) {
                 System.err.println("sendRequest() not yet connected!");
                 return;
             }
 
-            String uri = "/" + this.uriGenerator.incrementAndGet();
+            final String uri = "/" + this.uriGenerator.incrementAndGet();
             final HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri);
             request.addHeader("Host", "localhost:8080");
             request.addHeader("Connection", close ? "close" : "keep-alive");
-            ChannelFuture future = this.channel.write(request);
+            final ChannelFuture future = this.channel.write(request);
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future)
+                public void operationComplete(final ChannelFuture future)
                     throws Exception {
                     if(future.isSuccess()) {
                         System.out.println("<< " + request.getMethod() + " " + request.getUri());
@@ -159,7 +159,7 @@ public class NettyKeepAliveClient {
 
     // main ------------------------------------------------------------------
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         final NettyKeepAliveClient client =
             new NettyKeepAliveClient("localhost", 3000);
         if(!client.init()) {

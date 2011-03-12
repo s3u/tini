@@ -70,12 +70,14 @@ public class WritablePipeline implements Sink {
             if(handler == null) {
                 final Future f = channel.write(byteBuffer);
                 try {
-                    f.get();
+                    f.get(); // TODO - switch to queued writing
                 }
                 catch(ExecutionException ee) {
+                    // TODO: Bad
                     ee.printStackTrace();
                 }
                 catch(InterruptedException ie) {
+                    // TODO: Bad
                     ie.printStackTrace();
                 }
             }

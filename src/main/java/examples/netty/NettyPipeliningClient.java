@@ -28,12 +28,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NettyPipeliningClient {
 
-    private String host;
-    private int port;
+    final private String host;
+    final private int port;
     private ChannelFactory factory;
     private ClientHandler handler;
 
-    public NettyPipeliningClient(String host, int port) {
+    public NettyPipeliningClient(final String host, final int port) {
         this.host = host;
         this.port = port;
     }
@@ -42,11 +42,11 @@ public class NettyPipeliningClient {
         this.factory = new NioClientSocketChannelFactory(Executors.newCachedThreadPool(),
             Executors.newCachedThreadPool());
         this.handler = new ClientHandler();
-        ClientBootstrap bootstrap = new ClientBootstrap(this.factory);
+        final ClientBootstrap bootstrap = new ClientBootstrap(this.factory);
         bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
             @Override
             public ChannelPipeline getPipeline() throws Exception {
-                ChannelPipeline pipeline = Channels.pipeline();
+                final ChannelPipeline pipeline = Channels.pipeline();
                 pipeline.addLast("codec", new HttpClientCodec());
                 pipeline.addLast("aggregator", new HttpChunkAggregator(10000));
                 pipeline.addLast("handler", handler);
@@ -54,7 +54,7 @@ public class NettyPipeliningClient {
             }
         });
 
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(this.host, this.port));
+        final ChannelFuture future = bootstrap.connect(new InetSocketAddress(this.host, this.port));
         return future.awaitUninterruptibly().isSuccess();
     }
 
@@ -68,7 +68,7 @@ public class NettyPipeliningClient {
         }
     }
 
-    public void sendRequests(int requests, long interval) {
+    public void sendRequests(final int requests, final long interval) {
         for(int i = 0; i < requests; i++) {
             if(interval > 0) {
                 try {
@@ -93,17 +93,17 @@ public class NettyPipeliningClient {
         }
 
         @Override
-        public void channelConnected(ChannelHandlerContext ctx,
-                                     ChannelStateEvent e) throws Exception {
+        public void channelConnected(final ChannelHandlerContext ctx,
+                                     final ChannelStateEvent e) throws Exception {
             this.channel = e.getChannel();
         }
 
         @Override
-        public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-            HttpResponse response = (HttpResponse) e.getMessage();
-            String val = response.getHeader("connection");
-            String body = response.getContent().toString(CharsetUtil.UTF_8).trim();
-            int number = Integer.parseInt(body.substring(1));
+        public void messageReceived(final ChannelHandlerContext ctx, final MessageEvent e) throws Exception {
+            final HttpResponse response = (HttpResponse) e.getMessage();
+            final String val = response.getHeader("connection");
+            final String body = response.getContent().toString(CharsetUtil.UTF_8).trim();
+            final int number = Integer.parseInt(body.substring(1));
 
             if(this.lastReceived != null) {
                 if(number <= this.lastReceived.getAndIncrement()) {
@@ -121,21 +121,21 @@ public class NettyPipeliningClient {
             }
         }
 
-        public void sendRequest(boolean close) {
+        public void sendRequest(final boolean close) {
             if((this.channel == null) || !this.channel.isConnected()) {
                 System.err.println("sendRequest() not yet connected!");
                 return;
             }
 
-            String uri = "/" + this.uriGenerator.incrementAndGet();
+            final String uri = "/" + this.uriGenerator.incrementAndGet();
             final HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_1,
                 HttpMethod.GET, uri);
             request.addHeader("Host", "localhost:8080");
             request.addHeader("Connection", close ? "close" : "keep-alive");
-            ChannelFuture future = this.channel.write(request);
+            final ChannelFuture future = this.channel.write(request);
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(final ChannelFuture future) throws Exception {
                     if(future.isSuccess()) {
                         System.out.println("<< " + request.getMethod() + " " + request.getUri());
                     }
@@ -150,7 +150,7 @@ public class NettyPipeliningClient {
         }
     }
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         final NettyPipeliningClient client = new NettyPipeliningClient("localhost", 3000);
         if(!client.init()) {
             System.err.println("Failed to initialise client.");

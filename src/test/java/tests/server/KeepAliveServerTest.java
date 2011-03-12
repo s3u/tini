@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package tests.parser;
+package tests.server;
 
 import org.junit.Test;
 import org.tini.client.ClientConnection;
@@ -40,6 +40,10 @@ import static org.junit.Assert.fail;
  */
 public class KeepAliveServerTest {
 
+    public static void main(final String[] args) {
+        new KeepAliveServerTest().testServer();
+    }
+
     @Test
     public void testServer() {
         if("Darwin".equals(System.getProperty("os.name"))) {
@@ -54,7 +58,7 @@ public class KeepAliveServerTest {
             server.use(path, new Handler());
         }
 
-        final CountDownLatch lock = new CountDownLatch(1);
+        final CountDownLatch lock = new CountDownLatch(paths.size());
 
         server.listen(3000, new CompletionHandler<Void, Void>() {
             @Override
@@ -97,7 +101,8 @@ public class KeepAliveServerTest {
         if(!iterator.hasNext()) {
             return;
         }
-        final ClientRequest request = connection.request(iterator.next(), "GET");
+        final String path = iterator.next();
+        final ClientRequest request = connection.request(path, "GET");
         request.onResponse(new CompletionHandler<ClientResponse, Void>() {
             @Override
             public void completed(final ClientResponse response, final Void attachment) {
@@ -106,14 +111,17 @@ public class KeepAliveServerTest {
                 response.onData(new CompletionHandler<ByteBuffer, Void>() {
                     @Override
                     public void completed(final ByteBuffer result, final Void attachment) {
-                        final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
-                        resp.append(charBuffer);
+                        System.err.println("---> got data " + result.remaining());
                         if(result.remaining() == 0) {
-                            assertEquals("GET /foo HTTP/1.1", resp.toString());
+                            assertEquals(path, resp.toString());
                             lock.countDown();
 
                             // Now need to start the next request
                             sendRequest(iterator, connection, lock);
+                        }
+                        else {
+                            final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                            resp.append(charBuffer);
                         }
                     }
 
@@ -122,7 +130,6 @@ public class KeepAliveServerTest {
                         exc.printStackTrace();
                     }
                 });
-
             }
 
             @Override
@@ -139,8 +146,7 @@ public class KeepAliveServerTest {
             response.setContentType("text/plain; charset=UTF-8");
             response.addHeader("Connection", "keep-alive");
             response.addHeader("Transfer-Encoding", "chunked");
-
-            response.write(request.getRequestLine().toString());
+            response.write(request.getRequestLine().getUri());
             response.end();
         }
     }

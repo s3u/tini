@@ -40,13 +40,6 @@ public class ResponseParser extends HttpParser {
      * Read the next response message
      */
     public void readNext() {
-        // Let the caller register new handlers
-        if(beforeNext != null) {
-            super.clearHandlers();
-            onResponseLine.clear();
-            beforeNext.completed(null, null);
-        }
-
         findResponseLine();
     }
 
@@ -68,6 +61,7 @@ public class ResponseParser extends HttpParser {
                 final String[] initialLine = splitInitialLine(line.toString());
                 if(initialLine.length == 3) {
                     if(initialLine[0].length() == 0 || initialLine[1].length() == 0 || initialLine[2].length() == 0) {
+                        System.err.println(">>>> " + line.toString());
                         this.failed(new IOException("Malformed response line - " + line.toString()), null);
                     }
                     else {
@@ -101,6 +95,7 @@ public class ResponseParser extends HttpParser {
             @Override
             public void failed(final Throwable exc, final Void attachment) {
                 try {
+                    logger.log(Level.SEVERE, exc.getLocalizedMessage(), exc);
                     for(final CompletionHandler<ResponseLine, Void> handler : onResponseLine) {
                         try {
                             handler.failed(exc, attachment);
