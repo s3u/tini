@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Open one connection, and keep sending requests using the same connection.
  * <p/>
- * Expect the client to pipeline (buffer or multiplex) automatically.
+ * Expect the client to writablesQueue (buffer or multiplex) automatically.
  */
 public class PipeliningClient {
 

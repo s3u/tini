@@ -22,6 +22,7 @@ import org.tini.server.ServerRequest;
 import org.tini.server.ServerResponse;
 import org.tini.server.HttpServer;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.channels.CompletionHandler;
@@ -29,6 +30,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -40,19 +42,18 @@ import static org.junit.Assert.fail;
  */
 public class KeepAliveServerTest {
 
-    public static void main(final String[] args) {
-        new KeepAliveServerTest().testServer();
+    public static void main(String[] args) {
+        new KeepAliveServerTest().testSend();
     }
 
-    @Test
-    public void testServer() {
+//    @Test
+    public void testSendInSequence() {
         if("Darwin".equals(System.getProperty("os.name"))) {
             // Not supported on windows
             return;
         }
 
         final HttpServer server = HttpServer.createServer();
-
         final List<String> paths = Arrays.asList("/foo", "/bar", "/baz");
         for(final String path : paths) {
             server.use(path, new Handler());
@@ -63,13 +64,12 @@ public class KeepAliveServerTest {
         server.listen(3000, new CompletionHandler<Void, Void>() {
             @Override
             public void completed(final Void result, final Void attachment) {
+                // After the server started, connect to the server, and send requests
                 final ClientConnection connection = new ClientConnection();
                 connection.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
                     @Override
                     public void completed(final Void result, final Void attachment) {
-                        System.err.println("---> connected");
-
-                        sendRequest(paths.iterator(), connection, lock);
+                        sendRequest(paths.iterator(), connection, lock, true);
                     }
 
                     @Override
@@ -87,7 +87,13 @@ public class KeepAliveServerTest {
         });
 
         try {
-            lock.await(10, TimeUnit.SECONDS);
+            lock.await(1000, TimeUnit.SECONDS);
+            try {
+                server.shutdown();
+            }
+            catch(IOException ioe) {
+                fail();
+            }
         }
         catch(InterruptedException ie) {
             fail("Pending tests");
@@ -97,7 +103,70 @@ public class KeepAliveServerTest {
         }
     }
 
-    private void sendRequest(final Iterator<String> iterator, final ClientConnection connection, final CountDownLatch lock) {
+
+    @Test
+    // Just write them in order without waiting for the previous request to finish
+    public void testSend() {
+        if("Darwin".equals(System.getProperty("os.name"))) {
+            // Not supported on windows
+            return;
+        }
+
+        final HttpServer server = HttpServer.createServer();
+        final List<String> paths = Arrays.asList("/foo", "/bar", "/baz");
+        for(final String path : paths) {
+            server.use(path, new Handler());
+        }
+
+        final CountDownLatch lock = new CountDownLatch(paths.size());
+
+        server.listen(3000, new CompletionHandler<Void, Void>() {
+            @Override
+            public void completed(final Void result, final Void attachment) {
+                // After the server started, connect to the server, and send requests
+                final ClientConnection connection = new ClientConnection();
+                connection.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
+                    @Override
+                    public void completed(final Void result, final Void attachment) {
+                        final Iterator iterator = paths.iterator();
+                        while(iterator.hasNext()) {
+                            sendRequest(iterator, connection, lock, false);
+                        }
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                exc.printStackTrace();
+                fail();
+            }
+        });
+
+        try {
+            lock.await(1000, TimeUnit.SECONDS);
+            try {
+                server.shutdown();
+            }
+            catch(IOException ioe) {
+                fail();
+            }
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
+        }
+    }
+
+    private void sendRequest(final Iterator<String> iterator, final ClientConnection connection, final CountDownLatch lock,
+                             final boolean doContinue) {
         if(!iterator.hasNext()) {
             return;
         }
@@ -106,22 +175,59 @@ public class KeepAliveServerTest {
         request.onResponse(new CompletionHandler<ClientResponse, Void>() {
             @Override
             public void completed(final ClientResponse response, final Void attachment) {
-                System.err.println("---> got response");
                 final StringBuilder resp = new StringBuilder();
+
+                response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+                    @Override
+                    public void completed(final Map<String, List<String>> result, final Void attachment) {
+                        for(final String name : result.keySet()) {
+                            for(final String value : result.get(name)) {
+                                System.err.println(name + ": " + value);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
                 response.onData(new CompletionHandler<ByteBuffer, Void>() {
                     @Override
                     public void completed(final ByteBuffer result, final Void attachment) {
-                        System.err.println("---> got data " + result.remaining());
+                        System.err.println("Bytes: " + result.remaining());
                         if(result.remaining() == 0) {
+                            System.err.println("Body: " + resp.toString());
                             assertEquals(path, resp.toString());
                             lock.countDown();
 
-                            // Now need to start the next request
-                            sendRequest(iterator, connection, lock);
+                            // Send the next request
+                            // TODO: Reset handlers before starting the next
+                            // Need to have the similar mechanisms on the client side as
+                            // well so that you can have multiple ongoing reads/writes on either
+                            // side!3
+                            if(doContinue) {
+                                sendRequest(iterator, connection, lock, doContinue);
+                            }
                         }
                         else {
                             final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
                             resp.append(charBuffer);
+                        }
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
+                response.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
+                    @Override
+                    public void completed(final Map<String, List<String>> result, final Void attachment) {
+                        for(final String name : result.keySet()) {
+                            for(final String value : result.get(name)) {
+                                System.err.println(name + ": " + value);
+                            }
                         }
                     }
 
@@ -138,11 +244,11 @@ public class KeepAliveServerTest {
             }
         });
         request.writeHead();
+        request.end();
     }
 
     class Handler {
         public void service(final ServerRequest request, final ServerResponse response) {
-            System.err.println("Received: " + request.getRequestLine().getMethod() + " for " + request.getRequestLine().getUri());
             response.setContentType("text/plain; charset=UTF-8");
             response.addHeader("Connection", "keep-alive");
             response.addHeader("Transfer-Encoding", "chunked");

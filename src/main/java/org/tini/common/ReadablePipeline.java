@@ -14,16 +14,9 @@
 
 package org.tini.common;
 
-import org.tini.parser.RequestLine;
-import org.tini.parser.RequestParser;
-
-import java.io.IOException;
-import java.net.SocketOption;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /**
@@ -31,64 +24,54 @@ import java.util.logging.Logger;
  */
 public class ReadablePipeline {
 
-    private static final Logger logger = Logger.getLogger("org.tini.common");
+    protected static final Logger logger = Logger.getLogger("org.tini.common");
 
     // Channel
     protected final AsynchronousSocketChannel channel;
 
-    // Watch for idle connections
-    // TODO
-    private final IdleConnectionWatcher idleWatcher;
+    // Pending reads
+    private final BlockingQueue<ReadableMessage> readablesQueue;
 
-    // Handlers
-    protected final Map<String, Object> handlers;
-
-    private final RequestParser parser;
-
-    public ReadablePipeline(final AsynchronousSocketChannel channel,
-                            final Map<SocketOption, Object> options,
-                            final Map<String, Object> handlers,
-                            final long idleTimeout,
-                            final TimeUnit idleTimeoutUnit,
-                            final long readTimeout,
-                            final TimeUnit readTimeoutUnit) {
-
+    public ReadablePipeline(final AsynchronousSocketChannel channel) {
         this.channel = channel;
-        this.handlers = handlers;
-        idleWatcher = new IdleConnectionWatcher(channel, idleTimeoutUnit.toMillis(idleTimeout));
-
-        try {
-            for(final SocketOption option : options.keySet()) {
-                channel.setOption(option, options.get(option));
-            }
-        }
-        catch(IOException ioe) {
-            logger.log(Level.SEVERE, ioe.getMessage(), ioe);
-            try {
-                channel.close();
-            }
-            catch(IOException e) {
-                logger.log(Level.WARNING, e.getMessage(), e);
-            }
-        }
-
-        parser = new RequestParser(channel, readTimeout, readTimeoutUnit);
+        readablesQueue = new LinkedBlockingQueue<ReadableMessage>();
     }
+
+    /**
+     * <p>Push a readable message (i.e, client response or server request) into a queue.</p>
+     *
+     * @param message message
+     * @throws InterruptedException
+     */
+//    @Override
+    public void push(final ReadableMessage message) throws InterruptedException {
+        readablesQueue.put(message);
+    }
+
+    public ReadableMessage take() throws InterruptedException {
+        if(readablesQueue.peek() != null) {
+            return readablesQueue.take();
+        }
+        else {
+            return null;
+        }
+    }
+
 
     // TODO?
-    public void onNewRequest(final CompletionHandler<RequestLine, String> handler) {
-        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
-            @Override
-            public void completed(final RequestLine result, final Void attachment) {
-
-            }
-
-            @Override
-            public void failed(final Throwable exc, final Void attachment) {
-                //To change body of implemented methods use File | Settings | File Templates.
-            }
-        });
-    }
+//    public void onNewRequest(final CompletionHandler<RequestLine, String> handler) {
+//        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
+//            @Override
+//            public void completed(final RequestLine result, final Void attachment) {
+//
+//            }
+//
+//            @Override
+//            public void failed(final Throwable exc, final Void attachment) {
+//                //To change body of implemented methods use File | Settings | File Templates.
+//            }
+//        });
+//    }
 
     // TODO?
     public void handle(String id, ReadableMessage request, WritableMessage response) {

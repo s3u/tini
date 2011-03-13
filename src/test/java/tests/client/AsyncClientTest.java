@@ -40,6 +40,7 @@ import static org.junit.Assert.fail;
 /**
  * @author Subbu Allamaraju
  */
+// TODO: Test different methods and headers
 public class AsyncClientTest {
 
     public static void main(final String[] args) {
@@ -76,27 +77,23 @@ public class AsyncClientTest {
                 client.connect("localhost", 3000, new CompletionHandler<Void, Void>() {
                     @Override
                     public void completed(final Void result, final Void attachment) {
-                        System.err.println("Connected");
                         // Send a request
                         final ClientRequest request = client.request("/", "GET");
                         request.onResponse(new CompletionHandler<ClientResponse, Void>() {
                             @Override
                             public void completed(final ClientResponse response, final Void attachment) {
-                                System.err.println(response.getResponseLine().getCode());
                                 assertEquals(200, response.getResponseLine().getCode());
                                 lock.countDown();
 
                                 response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
                                     @Override
                                     public void completed(final Map<String, List<String>> result, final Void attachment) {
-                                        System.err.println(result.size());
                                         assertEquals(5, result.size());
                                         lock.countDown();
                                     }
 
                                     @Override
                                     public void failed(final Throwable exc, final Void attachment) {
-                                        exc.printStackTrace();
                                         fail();
                                     }
                                 });
@@ -113,14 +110,14 @@ public class AsyncClientTest {
 
                                     @Override
                                     public void failed(final Throwable exc, final Void attachment) {
-                                        exc.printStackTrace();
+                                        fail();
                                     }
                                 });
                             }
 
                             @Override
                             public void failed(final Throwable exc, final Void attachment) {
-                                exc.printStackTrace();
+                                fail();
                             }
                         });
                         request.addHeader("Host", "localhost");
@@ -131,7 +128,7 @@ public class AsyncClientTest {
 
                     @Override
                     public void failed(final Throwable exc, final Void attachment) {
-                        exc.printStackTrace();
+                        fail();
                     }
                 });
 
@@ -139,7 +136,6 @@ public class AsyncClientTest {
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                exc.printStackTrace();
                 fail();
             }
         });
@@ -154,7 +150,6 @@ public class AsyncClientTest {
                 server.shutdown();
             }
             catch(IOException ioe) {
-                ioe.printStackTrace();
             }
             assertEquals(0, lock.getCount());
         }
@@ -205,7 +200,6 @@ public class AsyncClientTest {
 
                                     @Override
                                     public void failed(final Throwable exc, final Void attachment) {
-                                        exc.printStackTrace();
                                         fail();
                                     }
                                 });
@@ -217,14 +211,14 @@ public class AsyncClientTest {
 
                                     @Override
                                     public void failed(final Throwable exc, final Void attachment) {
-                                        exc.printStackTrace();
+                                        fail();
                                     }
                                 });
                             }
 
                             @Override
                             public void failed(final Throwable exc, final Void attachment) {
-                                exc.printStackTrace();
+                                fail();
                             }
                         });
 
@@ -237,14 +231,13 @@ public class AsyncClientTest {
 
                     @Override
                     public void failed(final Throwable exc, final Void attachment) {
-                        exc.printStackTrace();
+                        fail();
                     }
                 });
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                exc.printStackTrace();
                 fail();
             }
         });
@@ -259,7 +252,7 @@ public class AsyncClientTest {
                 server.shutdown();
             }
             catch(IOException ioe) {
-                ioe.printStackTrace();
+                fail();
             }
             assertEquals(0, lock.getCount());
         }

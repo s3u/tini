@@ -35,38 +35,37 @@ public class WritablePipeline implements Sink {
 
     private static final Logger logger = Logger.getLogger("org.tini.common");
 
-    // Close if explicitly asked for
-    protected boolean closeWhenDone = false;
-
-
-    // Pending responses for pipelined requests.
-    protected final BlockingQueue<WritableMessage> pipeline;
-
+    // Pending writes.
+    private final BlockingQueue<WritableMessage> writablesQueue;
+    private final List<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
 
     private final AsynchronousSocketChannel channel;
 
-    public WritablePipeline(final AsynchronousSocketChannel channel) {
-        pipeline = new LinkedBlockingQueue<WritableMessage>();
-        this.channel = channel;
-    }
-
-    @Override
-    public void push(final WritableMessage source) throws InterruptedException {
-        pipeline.put(source);
-    }
+    // Close if explicitly asked for
+    protected boolean closeWhenDone = false;
 
     private boolean ended = false;
 
-    boolean isBuffering() {
-        return buffers.size() > 0;
+    public WritablePipeline(final AsynchronousSocketChannel channel) {
+        writablesQueue = new LinkedBlockingQueue<WritableMessage>();
+        this.channel = channel;
     }
 
-    List<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
+    /**
+     * <p>Push a writable message (i.e, client request or server response) into a queue.</p>
+     *
+     * @param message message
+     * @throws InterruptedException
+     */
+    @Override
+    public void push(final WritableMessage message) throws InterruptedException {
+        writablesQueue.put(message);
+    }
 
     @Override
     public void write(final WritableMessage message, final ByteBuffer byteBuffer, final CompletionHandler<Integer, Void> handler) {
         byteBuffer.rewind();
-        if(message == pipeline.peek()) {
+        if(message == writablesQueue.peek()) {
             if(handler == null) {
                 final Future f = channel.write(byteBuffer);
                 try {
@@ -127,8 +126,12 @@ public class WritablePipeline implements Sink {
         flush(message);
     }
 
-    void flush(final WritableMessage message) {
-        if(message == pipeline.peek()) {
+    private boolean isBuffering() {
+        return buffers.size() > 0;
+    }
+
+    private void flush(final WritableMessage message) {
+        if(message == writablesQueue.peek()) {
             for(final ByteBuffer byteBuffer : buffers) {
                 byteBuffer.rewind();
                 channel.write(byteBuffer);
@@ -136,7 +139,7 @@ public class WritablePipeline implements Sink {
 
             try {
                 // Remove from top
-                pipeline.take();
+                writablesQueue.take();
                 flushCompleted();
             }
             catch(InterruptedException ie) {
@@ -146,8 +149,8 @@ public class WritablePipeline implements Sink {
     }
 
 
-    void flushCompleted() throws InterruptedException {
-        WritableMessage top = pipeline.peek();
+    private void flushCompleted() throws InterruptedException {
+        WritableMessage top = writablesQueue.peek();
         // If the top is not buffering, it will go away once it is done. We don't need to worry
         // about it here.
         while(top != null && isBuffering() && ended) {
@@ -155,13 +158,13 @@ public class WritablePipeline implements Sink {
             // Flush this
             flush(top);
             try {
-                top = pipeline.take();
+                top = writablesQueue.take();
             }
             catch(InterruptedException ie) {
                 logger.log(Level.WARNING, ie.getMessage(), ie);
             }
         }
-        if(pipeline.peek() == null && closeWhenDone) {
+        if(writablesQueue.peek() == null && closeWhenDone) {
             try {
                 logger.info("Closing the connection");
                 channel.close();
@@ -171,6 +174,4 @@ public class WritablePipeline implements Sink {
             }
         }
     }
-
-
 }

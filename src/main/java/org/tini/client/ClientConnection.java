@@ -14,12 +14,12 @@
 
 package org.tini.client;
 
-import org.tini.common.Sink;
-import org.tini.common.WritableMessage;
+import org.tini.common.ReadablePipeline;
+import org.tini.common.WritablePipeline;
+import org.tini.parser.ResponseParser;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,6 +42,9 @@ public class ClientConnection {
     private AsynchronousSocketChannel channel = null;
     private AsynchronousChannelGroup channelGroup = null;
     private ExecutorService executorService = null;
+
+    private WritablePipeline requestPipeline;
+    private ReadablePipeline responsePipeline;
 
     private String host;
     private int port;
@@ -74,6 +78,16 @@ public class ClientConnection {
             channelGroup = AsynchronousChannelGroup.withCachedThreadPool(executorService, 1);
             channel = AsynchronousSocketChannel.open(channelGroup);
             channel.connect(socketAddress, null, handler);
+            requestPipeline = new WritablePipeline(channel);
+
+            // All submitted requests must be added to the request writablesQueue.
+            requestPipeline = new ClientRequestPipeline(channel);
+
+            // All client handlers must be attached to the response writablesQueue
+            responsePipeline = new ClientResponsePipeline(channel);
+
+            // Process responses from the writablesQueue
+            // TODO requestPipeline.process(responsePipeline);
         }
         catch(IOException ioe) {
             handler.failed(ioe, null);
@@ -93,16 +107,21 @@ public class ClientConnection {
     public ClientRequest request(final String path, final String method) {
         assert method != null;
 
-        // Put the request in a pipeline
+        // Put the request in a writablesQueue
         final String p = path == null || path.equals("") ? "/" : path;
+        final ResponseParser parser = new ResponseParser(channel, 1, TimeUnit.MINUTES);
+        final ClientRequest clientRequest = new ClientRequest(host, port, p, method,
+            parser, requestPipeline, responsePipeline);
+        final ClientResponse clientResponse = new ClientResponse(parser);
         try {
-            return new ClientRequest(host, port, p, method, channel,
-                new DirectSink(channel));
+            requestPipeline.push(clientRequest);
+            responsePipeline.push(clientResponse);
         }
         catch(InterruptedException ie) {
-            // TODO: Ugly - fix
-            throw new RuntimeException(ie);
+            // TODO
+            ie.printStackTrace();
         }
+        return clientRequest;
     }
 
     /**
@@ -117,7 +136,7 @@ public class ClientConnection {
      * @param headers headers
      * @return request object
      */
-    public ClientRequest request(final String path, final String method, final Map<String, List<String>> headers) throws InterruptedException {
+    public ClientRequest request(final String path, final String method, final Map<String, List<String>> headers) {
         final ClientRequest request = request(path, method);
 
         // Copy headers to the origin
@@ -150,44 +169,5 @@ public class ClientConnection {
             logger.log(Level.WARNING, ioe.getMessage(), ioe);
         }
 
-    }
-
-    // A sink to write to the channel.
-    private class DirectSink implements Sink {
-        private final AsynchronousSocketChannel channel;
-
-        DirectSink(final AsynchronousSocketChannel channel) {
-            this.channel = channel;
-        }
-
-        @Override
-        public void push(final WritableMessage source) throws InterruptedException {
-            // no-op
-        }
-
-        @Override
-        // TODO Write to a queue
-        public void write(final WritableMessage message, final ByteBuffer byteBuffer, final CompletionHandler<Integer, Void> handler) {
-            if(handler != null) {
-                channel.write(byteBuffer, null, handler);
-            }
-            else {
-                try {
-                    channel.write(byteBuffer);
-                }
-                catch(Throwable t) {
-                    // TODO:
-                    t.printStackTrace();
-                }
-            }
-        }
-
-        @Override
-        public void end(final WritableMessage message) {
-        }
-
-        @Override
-        public void closeWhenDone() {
-        }
     }
 }

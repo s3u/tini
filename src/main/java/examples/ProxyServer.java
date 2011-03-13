@@ -45,7 +45,6 @@ public class ProxyServer {
                     @Override
                     public void completed(final Void result, final Void attachment) {
                         // Connected, now send a request.
-                        try {
                         final ClientRequest clientRequest = connection.request(uri.getPath(), request.getRequestLine().getMethod(), request.getHeaders());
                         clientRequest.onResponse(new CompletionHandler<ClientResponse, Void>() {
                             @Override
@@ -75,11 +74,6 @@ public class ProxyServer {
                         // Copy data to the origin
                         Utils.pump(request, clientRequest);
                         clientRequest.writeHead();
-                        }
-                        catch(InterruptedException ie) {
-                            // TODO
-                            ie.printStackTrace();
-                        }
                     }
 
                     @Override

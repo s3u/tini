@@ -23,16 +23,18 @@ import org.tini.parser.ResponseParser;
  */
 public class ClientResponse extends ReadableMessage {
 
-    private final ResponseLine responseLine;
+    private ResponseLine responseLine;
 
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
      *
-     * @param parser parser
-     * @param responseLine response line
+     * @param parser       parser
      */
-    ClientResponse(final ResponseParser parser, final ResponseLine responseLine) {
+    ClientResponse(final ResponseParser parser) {
         super(parser);
+    }
+
+    void setResponseLine(final ResponseLine responseLine) {
         this.responseLine = responseLine;
     }
 

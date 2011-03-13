@@ -49,7 +49,7 @@ public abstract class WritableMessage {
     protected static final Charset US_ASCII = Charset.forName("US-ASCII");
     protected static final byte[] LAST_CHUNK = "0\r\n\r\n".getBytes(US_ASCII);
 
-    final Sink sink;
+    private final Sink sink;
     private boolean hasBody = false;
 
     protected WritableMessage(final Sink sink) {
@@ -204,7 +204,7 @@ public abstract class WritableMessage {
                 headers.put("connection", "keep-alive");
             }
 
-            // Add Assoc-Req header - see http://tools.ietf.org/html/draft-nottingham-http-pipeline-00
+            // Add Assoc-Req header - see http://tools.ietf.org/html/draft-nottingham-http-writablesQueue-00
 //        if(isChunked) {
 //            headers.put("Assoc-Req", request.getHeader("host") + request.getRequestLine().getUri());
 //            headers.put("Assoc-Chunk-ID", chunkId);

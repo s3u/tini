@@ -18,6 +18,7 @@ import org.tini.parser.HttpParser;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -28,11 +29,58 @@ import java.util.Map;
  */
 public class ReadableMessage {
 
-    // Message parser
-    private final HttpParser parser;
+    private final List<CompletionHandler<Map<String, List<String>>, Void>> onHeaders =
+        new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
+    private CompletionHandler<ByteBuffer, Void> onData;
+    private final List<CompletionHandler<Map<String, List<String>>, Void>> onTrailers =
+        new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
 
     protected ReadableMessage(final HttpParser parser) {
-        this.parser = parser;
+        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onHeaders) {
+                    handler.completed(result, attachment);
+                }
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onHeaders) {
+                    handler.failed(exc, attachment);
+                }
+            }
+        });
+        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
+            @Override
+            public void completed(final ByteBuffer result, final Void attachment) {
+                if(onData != null) {
+                    onData.completed(result, attachment);
+                }
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                if(onData != null) {
+                    onData.failed(exc, attachment);
+                }
+            }
+        });
+        parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
+            @Override
+            public void completed(final Map<String, List<String>> result, final Void attachment) {
+                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onTrailers) {
+                    handler.completed(result, attachment);
+                }
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onTrailers) {
+                    handler.failed(exc, attachment);
+                }
+            }
+        });
     }
 
     /**
@@ -42,7 +90,7 @@ public class ReadableMessage {
      */
     public void onHeaders(final CompletionHandler<Map<String, List<String>>, Void> handler) {
         assert handler != null;
-        parser.onHeaders(handler);
+        onHeaders.add(handler);
     }
 
     /**
@@ -52,7 +100,7 @@ public class ReadableMessage {
      */
     public void onData(final CompletionHandler<ByteBuffer, Void> handler) {
         assert handler != null;
-        parser.onData(handler);
+        onData = handler;
     }
 
     /**
@@ -62,6 +110,6 @@ public class ReadableMessage {
      */
     public void onTrailers(final CompletionHandler<Map<String, List<String>>, Void> handler) {
         assert handler != null;
-        parser.onTrailers(handler);
+        onTrailers.add(handler);
     }
 }

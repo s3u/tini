@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  * @author Subbu Allamaraju
  */
 // TODO: Revise design - should handle both server and client
-final class IdleConnectionWatcher
+public final class IdleConnectionWatcher
 {
     private static final Logger logger = Logger.getLogger("org.tini.common");
 
@@ -46,7 +46,7 @@ final class IdleConnectionWatcher
      * @param channel channel
      * @param idleTimeoutMills timeout
      */
-    IdleConnectionWatcher(final AsynchronousSocketChannel channel,
+    public IdleConnectionWatcher(final AsynchronousSocketChannel channel,
                           final long idleTimeoutMills) {
         this.channel = channel;
         lastTime = System.currentTimeMillis();

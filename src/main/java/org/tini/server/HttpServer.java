@@ -171,11 +171,11 @@ public class HttpServer {
                     server.accept(null, this);
 
                     // Create pipelines and parser
-                    final RequestPipeline requestPipeline = new RequestPipeline(channel, options, handlers,
+                    final ServerRequestPipeline requestPipeline = new ServerRequestPipeline(channel, options, handlers,
                         idleTimeout, idleTimeoutUnit, readTimeout, readTimeoutUnit);
-                    final WritablePipeline responsePipeline = new WritablePipeline(channel);
+                    final ServerResponsePipeline responsePipeline = new ServerResponsePipeline(channel);
 
-                    // Process requests from the pipeline
+                    // Process requests from the writablesQueue
                     requestPipeline.process(responsePipeline);
                 }
 

@@ -482,7 +482,6 @@ public abstract class HttpParser {
         final byte[] dest = new byte[size];
         System.arraycopy(readBuffer.array(), pos, dest, 0, size);
         try {
-
             onData.completed(ByteBuffer.wrap(dest), null);
         }
         catch(Throwable t) {

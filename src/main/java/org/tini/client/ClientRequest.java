@@ -14,17 +14,16 @@
 
 package org.tini.client;
 
+import org.tini.common.ReadablePipeline;
 import org.tini.common.WritableMessage;
-import org.tini.common.Sink;
+import org.tini.common.WritablePipeline;
 import org.tini.parser.HttpCodecUtil;
 import org.tini.parser.ResponseLine;
 import org.tini.parser.ResponseParser;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.concurrent.TimeUnit;
 
 /**
  * An HTTP client request.
@@ -38,39 +37,43 @@ public class ClientRequest extends WritableMessage {
     private final String method;
     private final String path;
 
-    private final AsynchronousSocketChannel channel;
-
     private CompletionHandler<ClientResponse, Void> onResponse;
+
+    private final ReadablePipeline readablePipeline;
+    private final ResponseParser parser;
 
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
      *
-     * @param host    host
-     * @param port    port
-     * @param path    request uri or path
-     * @param method  method
-     * @param channel channel
-     * @param sink    sink to write response
+     * @param host             host
+     * @param port             port
+     * @param path             request uri or path
+     * @param method           method
+     * @param parser           parser
+     * @param writablePipeline sink to write messages
+     * @param readablePipeline source to read messages
      */
     ClientRequest(final String host, final int port,
                   final String path,
                   final String method,
-                  final AsynchronousSocketChannel channel,
-                  final Sink sink) throws InterruptedException {
-        super(sink);
+                  final ResponseParser parser,
+                  final WritablePipeline writablePipeline,
+                  final ReadablePipeline readablePipeline) {
+        super(writablePipeline);
         this.host = host;
         this.port = port;
         this.path = path == null || path.equals("") ? "/" : path;
         this.method = method;
-        this.channel = channel;
+        this.readablePipeline = readablePipeline;
+        this.parser = parser;
     }
 
     /**
-     * Handler to be invoked on response.
+     * <p>During this event, apps can register handlers to process different parts of the
+     * response.</p>
      *
      * @param onResponse handler
      */
-    // TODO: Why this handler?
     public void onResponse(final CompletionHandler<ClientResponse, Void> onResponse) {
         this.onResponse = onResponse;
     }
@@ -91,12 +94,17 @@ public class ClientRequest extends WritableMessage {
         super.writeHead(new CompletionHandler<Integer, Void>() {
             @Override
             public void completed(final Integer result, final Void attachment) {
-                final ResponseParser parser = new ResponseParser(channel, 1, TimeUnit.MINUTES);
                 parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
                     @Override
                     public void completed(final ResponseLine result, final Void attachment) {
-                        final ClientResponse clientResponse = new ClientResponse(parser, result);
-                        onResponse.completed(clientResponse, null);
+                        try {
+                            final ClientResponse clientResponse = (ClientResponse) readablePipeline.take();
+                            clientResponse.setResponseLine(result);
+                            onResponse.completed(clientResponse, null);
+                        }
+                        catch(InterruptedException ie) {
+                            onResponse.failed(ie, null);
+                        }
                     }
 
                     @Override

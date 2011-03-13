@@ -14,11 +14,13 @@
 
 package org.tini.server;
 
+import org.tini.common.IdleConnectionWatcher;
 import org.tini.common.ReadablePipeline;
 import org.tini.common.WritablePipeline;
 import org.tini.parser.RequestLine;
 import org.tini.parser.RequestParser;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.SocketOption;
@@ -31,7 +33,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * <p>A pipeline is associated with a channel/connection. Since a client can send one or several
+ * <p>A writablesQueue is associated with a channel/connection. Since a client can send one or several
  * requests on a given connection, an instance of this class represents all the requests and
  * responses made on that connection.<p/>
  * <p/>
@@ -39,28 +41,53 @@ import java.util.logging.Logger;
  *
  * @author Subbu Allamaraju
  */
-public class RequestPipeline extends ReadablePipeline {
+public class ServerRequestPipeline extends ReadablePipeline {
+
+    // Watch for idle connections
+    // TODO
+    private final IdleConnectionWatcher idleWatcher;
 
     private static final Logger logger = Logger.getLogger("org.tini.server");
     private final RequestParser parser;
 
-    RequestPipeline(final AsynchronousSocketChannel channel,
-                    final Map<SocketOption, Object> options,
-                    final Map<String, Object> handlers,
-                    final long idleTimeout,
-                    final TimeUnit idleTimeoutUnit,
-                    final long readTimeout,
-                    final TimeUnit readTimeoutUnit) {
+    // Handlers
+    private final Map<String, Object> handlers;
 
-        super(channel, options, handlers, idleTimeout, idleTimeoutUnit, readTimeout, readTimeoutUnit);
+    ServerRequestPipeline(final AsynchronousSocketChannel channel,
+                          final Map<SocketOption, Object> options,
+                          final Map<String, Object> handlers,
+                          final long idleTimeout,
+                          final TimeUnit idleTimeoutUnit,
+                          final long readTimeout,
+                          final TimeUnit readTimeoutUnit) {
+
+        super(channel);
+        this.handlers = handlers;
 
         parser = new RequestParser(channel, readTimeout, readTimeoutUnit);
+
+        idleWatcher = new IdleConnectionWatcher(channel, idleTimeoutUnit.toMillis(idleTimeout));
+
+        try {
+            for(final SocketOption option : options.keySet()) {
+                channel.setOption(option, options.get(option));
+            }
+        }
+        catch(IOException ioe) {
+            logger.log(Level.SEVERE, ioe.getMessage(), ioe);
+            try {
+                channel.close();
+            }
+            catch(IOException e) {
+                logger.log(Level.WARNING, e.getMessage(), e);
+            }
+        }
     }
 
     /**
-     * <p>Start processing the request pipeline and fill up the response pipeline.</p>
+     * <p>Start processing the request writablesQueue and fill up the response writablesQueue.</p>
      *
-     * @param writablePipeline response pipeline
+     * @param writablePipeline response writablesQueue
      */
     public void process(final WritablePipeline writablePipeline) {
         // For each request we need to register handlers.
@@ -78,7 +105,7 @@ public class RequestPipeline extends ReadablePipeline {
                     writablePipeline.push(response);
                 }
                 catch(InterruptedException ie) {
-                    // TODO Ugly
+                    // TODO
                     ie.printStackTrace();
                 }
             }
