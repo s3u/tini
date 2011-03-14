@@ -72,6 +72,24 @@ public class EchoServer {
                         exc.printStackTrace();
                     }
                 });
+
+                // Echo trailers
+                request.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
+                    @Override
+                    public void completed(final Map<String, List<String>> result, final Void attachment) {
+                        for(final String name : headers.keySet()) {
+                            final List<String> values = headers.get(name);
+                            for(final String value : values) {
+                                response.write(name + ": " + value + "\n");
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        exc.printStackTrace();
+                    }
+                });
             }
         });
 

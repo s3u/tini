@@ -14,8 +14,6 @@
 
 package org.tini.server;
 
-import org.tini.common.WritablePipeline;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketOption;

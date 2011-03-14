@@ -21,7 +21,6 @@ import java.nio.channels.AsynchronousSocketChannel;
 /**
  * @author Subbu Allamaraju
  */
-// TODO: Currently, a placeholder
 public class ServerResponsePipeline extends WritablePipeline {
     public ServerResponsePipeline(final AsynchronousSocketChannel channel) {
         super(channel);

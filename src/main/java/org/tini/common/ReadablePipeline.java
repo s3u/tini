@@ -45,12 +45,7 @@ public class ReadablePipeline {
         return readablesQueue.peek();
     }
 
-    public ReadableMessage take() throws InterruptedException {
-        if(readablesQueue.peek() != null) {
-            return readablesQueue.take();
-        }
-        else {
-            return null;
-        }
+    public ReadableMessage poll() throws InterruptedException {
+        return readablesQueue.poll();
     }
 }

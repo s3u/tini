@@ -30,7 +30,7 @@ public class ClientResponse extends ReadableMessage {
      *
      * @param clientRequest associated request
      */
-    public ClientResponse(final ClientRequest clientRequest) {
+    ClientResponse(final ClientRequest clientRequest) {
         super();
         this.clientRequest = clientRequest;
     }

@@ -88,7 +88,7 @@ public class ClientResponsePipeline extends ReadablePipeline {
             @Override
             public void failed(final Throwable exc, final Void attachment) {
                 try {
-                    final ReadableMessage readableMessage = take();
+                    final ReadableMessage readableMessage = poll();
                     if(readableMessage != null) {
                         readableMessage.failure(exc);
                     }
@@ -115,7 +115,7 @@ public class ClientResponsePipeline extends ReadablePipeline {
             @Override
             public void failed(final Throwable exc, final Void attachment) {
                 try {
-                    final ReadableMessage readableMessage = take();
+                    final ReadableMessage readableMessage = poll();
                     if(readableMessage != null) {
                         readableMessage.failure(exc);
                     }
@@ -129,7 +129,7 @@ public class ClientResponsePipeline extends ReadablePipeline {
             @Override
             public void completed(final Map<String, List<String>> result, final Void attachment) {
                 try {
-                    final ReadableMessage readableMessage = take();
+                    final ReadableMessage readableMessage = poll();
                     if(readableMessage != null) {
                         readableMessage.trailers(result);
                     }
@@ -142,7 +142,7 @@ public class ClientResponsePipeline extends ReadablePipeline {
             @Override
             public void failed(final Throwable exc, final Void attachment) {
                 try {
-                    final ReadableMessage readableMessage = take();
+                    final ReadableMessage readableMessage = poll();
                     if(readableMessage != null) {
                         readableMessage.failure(exc);
                     }

@@ -27,7 +27,6 @@ import java.util.Date;
 import java.util.Locale;
 
 import java.util.TimeZone;
-import java.util.UUID;
 
 /**
  * HTTP 1.1 response
@@ -41,8 +40,6 @@ public class ServerResponse extends WritableMessage {
 
     private ServerRequest request;
 
-    private final String chunkId;
-
     public final static String HTTP_DATE_PATTERN = "EEE, dd MMM yyyyy HH:mm:ss z";
     static final DateFormat httpDateFormat = new SimpleDateFormat(HTTP_DATE_PATTERN, Locale.US);
 
@@ -52,9 +49,6 @@ public class ServerResponse extends WritableMessage {
 
     protected ServerResponse(final WritablePipeline sink) {
         super(sink);
-
-        chunkId = UUID.randomUUID().toString();
-
         this.headers.put("Server", "tini/1.0");
         this.headers.put("Date", httpDateFormat.format(new Date()));
     }

@@ -54,7 +54,7 @@ public class KeepAliveServerTest {
         }
 
         final HttpServer server = HttpServer.createServer();
-        final List<String> paths = Arrays.asList("/foo", "/bar");
+        final List<String> paths = Arrays.asList("/foo", "/bar", "/baz", "/blah", "/blahblah");
         for(final String path : paths) {
             server.use(path, new Handler());
         }
@@ -113,7 +113,7 @@ public class KeepAliveServerTest {
         }
 
         final HttpServer server = HttpServer.createServer();
-        final List<String> paths = Arrays.asList("/foo", "/bar", "/baz");
+        final List<String> paths = Arrays.asList("/foo", "/bar", "/baz", "/blah", "/blahblah");
         for(final String path : paths) {
             server.use(path, new Handler());
         }
@@ -149,7 +149,7 @@ public class KeepAliveServerTest {
         });
 
         try {
-            lock.await(1000, TimeUnit.SECONDS);
+            lock.await(10, TimeUnit.SECONDS);
             try {
                 server.shutdown();
             }

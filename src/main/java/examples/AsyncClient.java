@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-
 /**
  * Async client example
  */
@@ -25,8 +24,8 @@ public class AsyncClient {
 
         final CountDownLatch lock = new CountDownLatch(1);
 
-        final URI uri = args.length > 0 && args[1] != null ? new URI(args[0]) : new URI("http://www.subbu.org");
-
+        final URI uri = args.length > 1 && args[1] != null ? new URI(args[1]) : new URI("http://www.subbu.org");
+        System.err.println(uri.getHost() + " " + uri.getPort());
         final ClientConnection connection = new ClientConnection();
         connection.connect(uri.getHost(), uri.getPort(), new CompletionHandler<Void, Void>() {
             @Override

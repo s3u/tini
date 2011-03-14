@@ -35,18 +35,18 @@ public class WritablePipeline implements Sink {
 
     private static final Logger logger = Logger.getLogger("org.tini.common");
 
+    private final AsynchronousSocketChannel channel;
+
     // Pending writes.
     private final BlockingQueue<WritableMessage> writablesQueue;
     private final List<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
 
-    private final AsynchronousSocketChannel channel;
 
     // Close if explicitly asked for
-    protected boolean closeWhenDone = false;
-
+    private boolean closeWhenDone = false;
     private boolean ended = false;
 
-    public WritablePipeline(final AsynchronousSocketChannel channel) {
+    protected WritablePipeline(final AsynchronousSocketChannel channel) {
         writablesQueue = new LinkedBlockingQueue<WritableMessage>();
         this.channel = channel;
     }
@@ -60,6 +60,14 @@ public class WritablePipeline implements Sink {
     @Override
     public void push(final WritableMessage message) throws InterruptedException {
         writablesQueue.put(message);
+    }
+
+    public WritableMessage peek() throws InterruptedException {
+        return writablesQueue.peek();
+    }
+
+    public WritableMessage poll() throws InterruptedException {
+        return writablesQueue.poll();
     }
 
     @Override
@@ -147,7 +155,6 @@ public class WritablePipeline implements Sink {
             }
         }
     }
-
 
     private void flushCompleted() throws InterruptedException {
         WritableMessage top = writablesQueue.peek();

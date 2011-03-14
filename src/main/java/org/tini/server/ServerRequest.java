@@ -15,7 +15,6 @@
 package org.tini.server;
 
 import org.tini.common.ReadableMessage;
-import org.tini.parser.HttpParser;
 import org.tini.parser.RequestLine;
 
 import java.nio.channels.CompletionHandler;
@@ -44,7 +43,7 @@ public class ServerRequest extends ReadableMessage {
     private final RequestLine requestLine;
     private Map<String, List<String>> headers = Collections.EMPTY_MAP;
 
-    protected ServerRequest(final HttpParser parser, final RequestLine requestLine) {
+    ServerRequest(final RequestLine requestLine) {
         super();
         this.requestLine = requestLine;
     }
@@ -53,6 +52,11 @@ public class ServerRequest extends ReadableMessage {
         this.headers = headers;
     }
 
+    /**
+     * Returns request line
+     *
+     * @return request line
+     */
     public RequestLine getRequestLine() {
         return requestLine;
     }

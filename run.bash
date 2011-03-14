@@ -17,5 +17,5 @@ then
 fi
 
 echo "Running using Java on path at `which java` with args $javaArgs"
-java $debugArgs $javaArgs $1 $2 || die "Java process exited abnormally"
+java $debugArgs $javaArgs $2 || die "Java process exited abnormally"
 #java -Dhttp.proxyHost=localhost -Dhttp.proxyPort=8888 $debugArgs $javaArgs $1 $2 || die "Java process exited abnormally"
