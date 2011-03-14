@@ -14,7 +14,6 @@
 
 package org.tini.client;
 
-import org.tini.common.ReadablePipeline;
 import org.tini.common.WritablePipeline;
 import org.tini.parser.ResponseParser;
 
@@ -44,7 +43,7 @@ public class ClientConnection {
     private ExecutorService executorService = null;
 
     private WritablePipeline requestPipeline;
-    private ReadablePipeline responsePipeline;
+    private ClientResponsePipeline responsePipeline;
 
     private String host;
     private int port;
@@ -77,17 +76,27 @@ public class ClientConnection {
         try {
             channelGroup = AsynchronousChannelGroup.withCachedThreadPool(executorService, 1);
             channel = AsynchronousSocketChannel.open(channelGroup);
-            channel.connect(socketAddress, null, handler);
-            requestPipeline = new WritablePipeline(channel);
+            channel.connect(socketAddress, null, new CompletionHandler<Void, Void>() {
+                @Override
+                public void completed(final Void result, final Void attachment) {
+                    // All submitted requests must be added to this pipeline.
+                    requestPipeline = new ClientRequestPipeline(channel);
+                    responsePipeline = new ClientResponsePipeline(channel);
 
-            // All submitted requests must be added to the request writablesQueue.
-            requestPipeline = new ClientRequestPipeline(channel);
+                    // TODO: Externalize timeout
+                    final ResponseParser parser = new ResponseParser(channel, (long) 10, TimeUnit.MINUTES);
+                    // Let the responsePipeline listen to parse events
+                    responsePipeline.bind(parser);
 
-            // All client handlers must be attached to the response writablesQueue
-            responsePipeline = new ClientResponsePipeline(channel);
+                    // Call the application handler
+                    handler.completed(result, attachment);
+                }
 
-            // Process responses from the writablesQueue
-            // TODO requestPipeline.process(responsePipeline);
+                @Override
+                public void failed(final Throwable exc, final Void attachment) {
+                    handler.failed(exc, attachment);
+                }
+            });
         }
         catch(IOException ioe) {
             handler.failed(ioe, null);
@@ -109,13 +118,12 @@ public class ClientConnection {
 
         // Put the request in a writablesQueue
         final String p = path == null || path.equals("") ? "/" : path;
-        final ResponseParser parser = new ResponseParser(channel, 1, TimeUnit.MINUTES);
-        final ClientRequest clientRequest = new ClientRequest(host, port, p, method,
-            parser, requestPipeline, responsePipeline);
-        final ClientResponse clientResponse = new ClientResponse(parser);
+
+        final ClientRequest clientRequest = new ClientRequest(host, port, p, method, requestPipeline);
+        final ClientResponse clientResponse = new ClientResponse(clientRequest);
         try {
-            requestPipeline.push(clientRequest);
-            responsePipeline.push(clientResponse);
+            requestPipeline.push(clientRequest); // Requests written in order
+            responsePipeline.push(clientResponse); // Responses parsed in order
         }
         catch(InterruptedException ie) {
             // TODO

@@ -142,7 +142,7 @@ public class ServerRequestPipeline extends ReadablePipeline {
             }
         });
 
-        parser.readNext();
+        parser.go();
     }
 
     private void invokeApp(final ServerRequest httpRequest, final ServerResponse httpResponse,

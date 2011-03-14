@@ -14,8 +14,6 @@
 
 package org.tini.common;
 
-import org.tini.parser.HttpParser;
-
 import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.util.ArrayList;
@@ -35,52 +33,7 @@ public class ReadableMessage {
     private final List<CompletionHandler<Map<String, List<String>>, Void>> onTrailers =
         new ArrayList<CompletionHandler<Map<String, List<String>>, Void>>(1);
 
-    protected ReadableMessage(final HttpParser parser) {
-        parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
-            @Override
-            public void completed(final Map<String, List<String>> result, final Void attachment) {
-                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onHeaders) {
-                    handler.completed(result, attachment);
-                }
-            }
-
-            @Override
-            public void failed(final Throwable exc, final Void attachment) {
-                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onHeaders) {
-                    handler.failed(exc, attachment);
-                }
-            }
-        });
-        parser.onData(new CompletionHandler<ByteBuffer, Void>() {
-            @Override
-            public void completed(final ByteBuffer result, final Void attachment) {
-                if(onData != null) {
-                    onData.completed(result, attachment);
-                }
-            }
-
-            @Override
-            public void failed(final Throwable exc, final Void attachment) {
-                if(onData != null) {
-                    onData.failed(exc, attachment);
-                }
-            }
-        });
-        parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
-            @Override
-            public void completed(final Map<String, List<String>> result, final Void attachment) {
-                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onTrailers) {
-                    handler.completed(result, attachment);
-                }
-            }
-
-            @Override
-            public void failed(final Throwable exc, final Void attachment) {
-                for(final CompletionHandler<Map<String, List<String>>, Void> handler : onTrailers) {
-                    handler.failed(exc, attachment);
-                }
-            }
-        });
+    protected ReadableMessage() {
     }
 
     /**
@@ -111,5 +64,28 @@ public class ReadableMessage {
     public void onTrailers(final CompletionHandler<Map<String, List<String>>, Void> handler) {
         assert handler != null;
         onTrailers.add(handler);
+    }
+
+    // TODO: protect all these below
+    public void headers(final Map<String, List<String>> headers) {
+       for(final CompletionHandler<Map<String, List<String>>, Void> handler : onHeaders) {
+           handler.completed(headers, null);
+       }
+    }
+
+    public void data(final ByteBuffer data) {
+        if(onData != null) {
+            onData.completed(data, null);
+        }
+    }
+
+    public void trailers(final Map<String, List<String>> trailers) {
+        for(final CompletionHandler<Map<String, List<String>>, Void> handler : onTrailers) {
+            handler.completed(trailers, null);
+        }
+    }
+
+    public void failure(final Throwable failure) {
+        // TODO
     }
 }

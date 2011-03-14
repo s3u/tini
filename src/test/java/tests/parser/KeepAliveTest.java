@@ -74,7 +74,7 @@ public class KeepAliveTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -136,7 +136,7 @@ public class KeepAliveTest {
                 fail();
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -228,7 +228,7 @@ public class KeepAliveTest {
         });
 
 
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }

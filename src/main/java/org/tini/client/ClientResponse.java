@@ -16,7 +16,6 @@ package org.tini.client;
 
 import org.tini.common.ReadableMessage;
 import org.tini.parser.ResponseLine;
-import org.tini.parser.ResponseParser;
 
 /**
  * @author Subbu Allamaraju
@@ -24,14 +23,16 @@ import org.tini.parser.ResponseParser;
 public class ClientResponse extends ReadableMessage {
 
     private ResponseLine responseLine;
+    private final ClientRequest clientRequest;
 
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
      *
-     * @param parser       parser
+     * @param clientRequest associated request
      */
-    ClientResponse(final ResponseParser parser) {
-        super(parser);
+    public ClientResponse(final ClientRequest clientRequest) {
+        super();
+        this.clientRequest = clientRequest;
     }
 
     void setResponseLine(final ResponseLine responseLine) {
@@ -45,5 +46,14 @@ public class ClientResponse extends ReadableMessage {
      */
     public ResponseLine getResponseLine() {
         return responseLine;
+    }
+
+    /**
+     * <p>Returns the associated request.</p>
+     *
+     * @return request
+     */
+    public ClientRequest getRequest() {
+        return clientRequest;
     }
 }

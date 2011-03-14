@@ -14,12 +14,9 @@
 
 package org.tini.client;
 
-import org.tini.common.ReadablePipeline;
 import org.tini.common.WritableMessage;
 import org.tini.common.WritablePipeline;
 import org.tini.parser.HttpCodecUtil;
-import org.tini.parser.ResponseLine;
-import org.tini.parser.ResponseParser;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,9 +36,6 @@ public class ClientRequest extends WritableMessage {
 
     private CompletionHandler<ClientResponse, Void> onResponse;
 
-    private final ReadablePipeline readablePipeline;
-    private final ResponseParser parser;
-
     /**
      * Creates an HTTP request. Use {@link ClientConnection} to create a new request.
      *
@@ -49,23 +43,35 @@ public class ClientRequest extends WritableMessage {
      * @param port             port
      * @param path             request uri or path
      * @param method           method
-     * @param parser           parser
      * @param writablePipeline sink to write messages
-     * @param readablePipeline source to read messages
      */
     ClientRequest(final String host, final int port,
                   final String path,
                   final String method,
-                  final ResponseParser parser,
-                  final WritablePipeline writablePipeline,
-                  final ReadablePipeline readablePipeline) {
+                  final WritablePipeline writablePipeline) {
         super(writablePipeline);
         this.host = host;
         this.port = port;
         this.path = path == null || path.equals("") ? "/" : path;
         this.method = method;
-        this.readablePipeline = readablePipeline;
-        this.parser = parser;
+    }
+
+    /**
+     * <p>Returns the request URI used for this request.</p>
+     *
+     * @return request URI
+     */
+    public String getRequestUri() {
+        return path;
+    }
+
+    /**
+     * <p>Returns the request method.</p>
+     *
+     * @return request method
+     */
+    public String getMethod() {
+        return method;
     }
 
     /**
@@ -81,7 +87,6 @@ public class ClientRequest extends WritableMessage {
     /**
      * Writes the request line and headers and begins parsing the response.
      */
-    // TODO: Rename - this is confusing
     public void writeHead() {
         if(!headers.containsKey("host")) {
             if(port == 80) {
@@ -94,26 +99,7 @@ public class ClientRequest extends WritableMessage {
         super.writeHead(new CompletionHandler<Integer, Void>() {
             @Override
             public void completed(final Integer result, final Void attachment) {
-                parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
-                    @Override
-                    public void completed(final ResponseLine result, final Void attachment) {
-                        try {
-                            final ClientResponse clientResponse = (ClientResponse) readablePipeline.take();
-                            clientResponse.setResponseLine(result);
-                            onResponse.completed(clientResponse, null);
-                        }
-                        catch(InterruptedException ie) {
-                            onResponse.failed(ie, null);
-                        }
-                    }
-
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        onResponse.failed(exc, attachment);
-                    }
-                });
-
-                parser.readNext();
+                // Needed?
             }
 
             @Override
@@ -122,6 +108,10 @@ public class ClientRequest extends WritableMessage {
                 exc.printStackTrace();
             }
         });
+    }
+
+    protected void response(final ClientResponse clientResponse) {
+        onResponse.completed(clientResponse, null);
     }
 
     @Override

@@ -16,7 +16,6 @@ package tests.parser;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
@@ -32,16 +31,10 @@ import java.util.concurrent.TimeUnit;
 public class MockAsyncSocketChannel extends AsynchronousSocketChannel {
 
     private InputStream source;
-    private OutputStream sink;
 
     public MockAsyncSocketChannel(final InputStream source) {
         super(null);
         this.source = source;
-    }
-
-    public MockAsyncSocketChannel(final OutputStream sink) {
-        super(null);
-        this.sink = sink;
     }
 
     @Override

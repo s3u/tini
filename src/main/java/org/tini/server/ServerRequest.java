@@ -45,7 +45,7 @@ public class ServerRequest extends ReadableMessage {
     private Map<String, List<String>> headers = Collections.EMPTY_MAP;
 
     protected ServerRequest(final HttpParser parser, final RequestLine requestLine) {
-        super(parser);
+        super();
         this.requestLine = requestLine;
     }
 

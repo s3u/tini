@@ -22,6 +22,7 @@ import java.nio.channels.CompletionHandler;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -86,16 +87,6 @@ public abstract class HttpParser {
         onHeaders.add(new NullCompletionHandler<Map<String, List<String>>, Void>());
         onTrailers.add(new NullCompletionHandler<Map<String, List<String>>, Void>());
 
-    }
-
-    /**
-     * Clear handlers before parsing a request/response message.
-     */
-    protected void clearHandlers() {
-        // Clear all handlers
-        onHeaders.clear();
-        onData = new ReadingCompletionHandler();
-        onTrailers.clear();
     }
 
     /**
@@ -168,7 +159,7 @@ public abstract class HttpParser {
                     }
                     finally {
                         if(isTrailers) {
-                            readNext();
+                            go();
                         }
                         else {
                             findData();
@@ -271,7 +262,7 @@ public abstract class HttpParser {
     /**
      * Request the next message
      */
-    abstract protected void readNext();
+    abstract protected void go();
 
     /**
      * Find trailers and invoke handlers.
@@ -281,7 +272,18 @@ public abstract class HttpParser {
             findHeaders(true);
         }
         else {
-            readNext();
+            // No trailers. But let the app know about about it before continuing
+            for(final CompletionHandler<Map<String, List<String>>, Void> handler : onTrailers) {
+                try {
+                    handler.completed(Collections.<String, List<String>>emptyMap(), null);
+                }
+                catch(Throwable t) {
+                    logger.log(Level.WARNING, t.getMessage(), t);
+                }
+            }
+
+            // Next message
+            go();
         }
     }
 

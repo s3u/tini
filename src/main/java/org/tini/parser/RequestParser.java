@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 /**
- * Parses HTTP requests
+ * <p>Parses HTTP requests on the server side.</p>
  *
  * @author Subbu Allamaraju
  */
@@ -44,7 +44,7 @@ public class RequestParser extends HttpParser {
         onRequestLine.add(handler);
     }
 
-    public void readNext() {
+    public void go() {
         findRequestLine();
     }
 
@@ -98,6 +98,5 @@ public class RequestParser extends HttpParser {
                 }
             }
         }, line, maxInitialLineLength);
-
     }
 }

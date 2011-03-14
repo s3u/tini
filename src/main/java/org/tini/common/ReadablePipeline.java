@@ -37,15 +37,12 @@ public class ReadablePipeline {
         readablesQueue = new LinkedBlockingQueue<ReadableMessage>();
     }
 
-    /**
-     * <p>Push a readable message (i.e, client response or server request) into a queue.</p>
-     *
-     * @param message message
-     * @throws InterruptedException
-     */
-//    @Override
     public void push(final ReadableMessage message) throws InterruptedException {
         readablesQueue.put(message);
+    }
+
+    public ReadableMessage peek() throws InterruptedException {
+        return readablesQueue.peek();
     }
 
     public ReadableMessage take() throws InterruptedException {
@@ -56,26 +53,4 @@ public class ReadablePipeline {
             return null;
         }
     }
-
-
-    // TODO?
-//    public void onNewRequest(final CompletionHandler<RequestLine, String> handler) {
-//        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
-//            @Override
-//            public void completed(final RequestLine result, final Void attachment) {
-//
-//            }
-//
-//            @Override
-//            public void failed(final Throwable exc, final Void attachment) {
-//                //To change body of implemented methods use File | Settings | File Templates.
-//            }
-//        });
-//    }
-
-    // TODO?
-    public void handle(String id, ReadableMessage request, WritableMessage response) {
-
-    }
-
 }

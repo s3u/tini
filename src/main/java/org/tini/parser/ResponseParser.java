@@ -24,23 +24,21 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * <p>Reads responses from a channel, and hands each response to a readable pipeline.</p>
+ *
  * @author Subbu Allamaraju
  */
 public class ResponseParser extends HttpParser {
     private static final Logger logger = Logger.getLogger("org.tini.parser");
 
+    // Response messages parsed from the channel will be pumped into messages found in this pipeline.
+    // In this implementation, each message will be removed from the pipeline.
     private final List<CompletionHandler<ResponseLine, Void>> onResponseLine = new ArrayList<CompletionHandler<ResponseLine, Void>>(1);
 
-    public ResponseParser(final AsynchronousSocketChannel channel, final long timeout,
+    public ResponseParser(final AsynchronousSocketChannel channel,
+                          final long timeout,
                           final TimeUnit timeUnit) {
         super(channel, timeout, timeUnit);
-    }
-
-    /**
-     * Read the next response message
-     */
-    public void readNext() {
-        findResponseLine();
     }
 
     /**
@@ -52,7 +50,14 @@ public class ResponseParser extends HttpParser {
         onResponseLine.add(handler);
     }
 
-    protected void findResponseLine() {
+    /**
+     * Read the next response message
+     */
+    public synchronized void go() {
+        findResponseLine();
+    }
+
+    private void findResponseLine() {
         final StringBuilder line = new StringBuilder();
 
         onLine(new CompletionHandler<StringBuilder, Void>() {
@@ -61,21 +66,16 @@ public class ResponseParser extends HttpParser {
                 final String[] initialLine = splitInitialLine(line.toString());
                 if(initialLine.length == 3) {
                     if(initialLine[0].length() == 0 || initialLine[1].length() == 0 || initialLine[2].length() == 0) {
-                        System.err.println(">>>> " + line.toString());
                         this.failed(new IOException("Malformed response line - " + line.toString()), null);
                     }
                     else {
                         try {
                             final int status = Integer.parseInt(initialLine[1]);
                             final ResponseLine responseLine = new ResponseLine(initialLine[0], status, initialLine[2]);
+
                             try {
                                 for(final CompletionHandler<ResponseLine, Void> handler : onResponseLine) {
-                                    try {
-                                        handler.completed(responseLine, null);
-                                    }
-                                    catch(Throwable t) {
-                                        logger.log(Level.WARNING, t.getMessage(), t);
-                                    }
+                                    handler.completed(responseLine, null);
                                 }
                             }
                             finally {
@@ -96,13 +96,14 @@ public class ResponseParser extends HttpParser {
             public void failed(final Throwable exc, final Void attachment) {
                 try {
                     logger.log(Level.SEVERE, exc.getLocalizedMessage(), exc);
-                    for(final CompletionHandler<ResponseLine, Void> handler : onResponseLine) {
-                        try {
-                            handler.failed(exc, attachment);
+
+                    try {
+                        for(final CompletionHandler<ResponseLine, Void> handler : onResponseLine) {
+                            handler.failed(exc, null);
                         }
-                        catch(Throwable t) {
-                            logger.log(Level.WARNING, t.getMessage(), t);
-                        }
+                    }
+                    catch(Throwable t) {
+                        logger.log(Level.WARNING, t.getLocalizedMessage(), t);
                     }
                 }
                 finally {

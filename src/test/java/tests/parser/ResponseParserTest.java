@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 public class ResponseParserTest {
 
     @Test
-    public void testResponseLine() {
+    public void testResponseLine() throws Exception {
         final String req = "HTTP/1.1 200 OK\r\n" +
             "\r\n";
         final ByteArrayInputStream bais = new ByteArrayInputStream(req.getBytes(Charset.forName("US-ASCII")));
@@ -56,10 +56,9 @@ public class ResponseParserTest {
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                exc.printStackTrace();
+                fail();
             }
         });
-
         parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
             @Override
             public void completed(final Map<String, List<String>> result, final Void attachment) {
@@ -71,7 +70,7 @@ public class ResponseParserTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -117,7 +116,7 @@ public class ResponseParserTest {
                 fail("Should fail");
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -174,7 +173,7 @@ public class ResponseParserTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }

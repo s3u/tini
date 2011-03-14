@@ -17,9 +17,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
-
 public class RequestParserTest {
-
 
     public static void main(final String[] args) {
         new RequestParserTest().testFixedBody();
@@ -33,9 +31,33 @@ public class RequestParserTest {
         final ByteArrayInputStream bais = new ByteArrayInputStream(req.getBytes(Charset.forName("US-ASCII")));
 
         final MockAsyncSocketChannel channel = new MockAsyncSocketChannel(bais);
+        final CountDownLatch lock = new CountDownLatch(1);
 
         final RequestParser parser = new RequestParser(channel, 100, TimeUnit.SECONDS);
-        // TODO
+        parser.onRequestLine(new CompletionHandler<RequestLine, Void>() {
+            @Override
+            public void completed(final RequestLine result, final Void attachment) {
+                assertEquals("GET", result.getMethod());
+                assertEquals("/foo", result.getUri());
+                assertEquals("HTTP/1.1", result.getVersion());
+                lock.countDown();
+            }
+
+            @Override
+            public void failed(final Throwable exc, final Void attachment) {
+                fail();
+            }
+        });
+        parser.go();
+        try {
+            lock.await(10, TimeUnit.SECONDS);
+        }
+        catch(InterruptedException ie) {
+            fail("Pending tests");
+        }
+        finally {
+            assertEquals(0, lock.getCount());
+        }
     }
 
     @Test
@@ -72,7 +94,7 @@ public class RequestParserTest {
                 fail("Should fail");
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -129,7 +151,7 @@ public class RequestParserTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -195,7 +217,7 @@ public class RequestParserTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }

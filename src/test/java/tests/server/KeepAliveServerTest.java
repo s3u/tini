@@ -42,11 +42,11 @@ import static org.junit.Assert.fail;
  */
 public class KeepAliveServerTest {
 
-    public static void main(String[] args) {
-        new KeepAliveServerTest().testSend();
+    public static void main(final String[] args) {
+        new KeepAliveServerTest().testSendInSequence();
     }
 
-//    @Test
+    @Test
     public void testSendInSequence() {
         if("Darwin".equals(System.getProperty("os.name"))) {
             // Not supported on windows
@@ -54,12 +54,12 @@ public class KeepAliveServerTest {
         }
 
         final HttpServer server = HttpServer.createServer();
-        final List<String> paths = Arrays.asList("/foo", "/bar", "/baz");
+        final List<String> paths = Arrays.asList("/foo", "/bar");
         for(final String path : paths) {
             server.use(path, new Handler());
         }
 
-        final CountDownLatch lock = new CountDownLatch(paths.size());
+        final CountDownLatch lock = new CountDownLatch(3 * paths.size());
 
         server.listen(3000, new CompletionHandler<Void, Void>() {
             @Override
@@ -118,7 +118,7 @@ public class KeepAliveServerTest {
             server.use(path, new Handler());
         }
 
-        final CountDownLatch lock = new CountDownLatch(paths.size());
+        final CountDownLatch lock = new CountDownLatch(3 * paths.size());
 
         server.listen(3000, new CompletionHandler<Void, Void>() {
             @Override
@@ -180,11 +180,8 @@ public class KeepAliveServerTest {
                 response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
                     @Override
                     public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        for(final String name : result.keySet()) {
-                            for(final String value : result.get(name)) {
-                                System.err.println(name + ": " + value);
-                            }
-                        }
+                        assertEquals(5, result.size());
+                        lock.countDown();
                     }
 
                     @Override
@@ -195,17 +192,10 @@ public class KeepAliveServerTest {
                 response.onData(new CompletionHandler<ByteBuffer, Void>() {
                     @Override
                     public void completed(final ByteBuffer result, final Void attachment) {
-                        System.err.println("Bytes: " + result.remaining());
                         if(result.remaining() == 0) {
-                            System.err.println("Body: " + resp.toString());
                             assertEquals(path, resp.toString());
                             lock.countDown();
 
-                            // Send the next request
-                            // TODO: Reset handlers before starting the next
-                            // Need to have the similar mechanisms on the client side as
-                            // well so that you can have multiple ongoing reads/writes on either
-                            // side!3
                             if(doContinue) {
                                 sendRequest(iterator, connection, lock, doContinue);
                             }
@@ -224,11 +214,8 @@ public class KeepAliveServerTest {
                 response.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
                     @Override
                     public void completed(final Map<String, List<String>> result, final Void attachment) {
-                        for(final String name : result.keySet()) {
-                            for(final String value : result.get(name)) {
-                                System.err.println(name + ": " + value);
-                            }
-                        }
+                        assertEquals(0, result.size());
+                        lock.countDown();
                     }
 
                     @Override
@@ -243,6 +230,7 @@ public class KeepAliveServerTest {
                 exc.printStackTrace();
             }
         });
+        // TODO: Not clean
         request.writeHead();
         request.end();
     }

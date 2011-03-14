@@ -37,10 +37,6 @@ import static org.junit.Assert.fail;
  */
 public class ChunkedMessageTest {
 
-    public static void main(final String[] args) {
-        new ChunkedMessageTest().testChunkedBody();
-    }
-
     @Test
     public void testChunkedBody() {
         final String req = "HTTP/1.1 200 OK\r\n" +
@@ -76,7 +72,7 @@ public class ChunkedMessageTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -170,7 +166,7 @@ public class ChunkedMessageTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }
@@ -429,7 +425,7 @@ public class ChunkedMessageTest {
             public void failed(final Throwable exc, final Void attachment) {
             }
         });
-        parser.readNext();
+        parser.go();
         try {
             lock.await(10, TimeUnit.SECONDS);
         }

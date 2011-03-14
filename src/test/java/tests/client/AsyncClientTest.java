@@ -102,10 +102,8 @@ public class AsyncClientTest {
                                     public void completed(final ByteBuffer result, final Void attachment) {
                                         final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
                                         resp.append(charBuffer.toString());
-                                        if(result.remaining() == 0) {
-                                            assertEquals("hello world", resp.toString());
-                                            lock.countDown();
-                                        }
+                                        assertEquals("hello world", resp.toString());
+                                        lock.countDown();
                                     }
 
                                     @Override
@@ -155,14 +153,14 @@ public class AsyncClientTest {
         }
     }
 
-    //@Test
-    public void testGetChunked() {
+    @Test
+    public void testGetChunkedtestGetChunked() {
         if("Darwin".equals(System.getProperty("os.name"))) {
             // Not supported on windows
             return;
         }
 
-        final CountDownLatch lock = new CountDownLatch(6);
+        final CountDownLatch lock = new CountDownLatch(4);
         final HttpServer server = HttpServer.createServer();
         server.use("/",
             new Object() {
@@ -189,6 +187,7 @@ public class AsyncClientTest {
                         request.onResponse(new CompletionHandler<ClientResponse, Void>() {
                             @Override
                             public void completed(final ClientResponse response, final Void attachment) {
+                                final StringBuilder builder = new StringBuilder();
                                 response.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
                                     @Override
                                     public void completed(final Map<String, List<String>> result, final Void attachment) {
@@ -206,7 +205,14 @@ public class AsyncClientTest {
                                 response.onData(new CompletionHandler<ByteBuffer, Void>() {
                                     @Override
                                     public void completed(final ByteBuffer result, final Void attachment) {
-                                        // TODO
+                                        if(result.hasRemaining()) {
+                                            final CharBuffer charBuffer = Charset.forName("UTF-8").decode(result);
+                                            builder.append(charBuffer.toString());
+                                        }
+                                        else {
+                                            assertEquals("helloworld", builder.toString());
+                                            lock.countDown();
+                                        }
                                     }
 
                                     @Override
