@@ -31,6 +31,13 @@ public class RequestParser extends HttpParser {
 
     private final List<CompletionHandler<RequestLine, Void>> onRequestLine = new ArrayList<CompletionHandler<RequestLine, Void>>(1);
 
+    /**
+     * Creates a request parser
+     *
+     * @param channel channel to request messages from
+     * @param timeout read timeout
+     * @param timeUnit read timeout unit
+     */
     public RequestParser(final AsynchronousSocketChannel channel, final long timeout, final TimeUnit timeUnit) {
         super(channel, timeout, timeUnit);
     }
@@ -44,14 +51,13 @@ public class RequestParser extends HttpParser {
         onRequestLine.add(handler);
     }
 
-    public void go() {
-        findRequestLine();
-    }
-
-    protected void findRequestLine() {
+    /**
+     * Initiates parsing by looking for the first line.
+     */
+    public synchronized void go() {
         final StringBuilder line = new StringBuilder();
 
-        onLine(new CompletionHandler<StringBuilder, Void>() {
+        onLine(line, maxInitialLineLength, new CompletionHandler<StringBuilder, Void>() {
             @Override
             public void completed(final StringBuilder result, final Void attachment) {
                 final String[] initialLine = splitInitialLine(line.toString());
@@ -97,6 +103,6 @@ public class RequestParser extends HttpParser {
                     shutdown();
                 }
             }
-        }, line, maxInitialLineLength);
+        });
     }
 }

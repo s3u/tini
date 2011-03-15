@@ -49,11 +49,11 @@ public abstract class WritableMessage {
     protected static final Charset US_ASCII = Charset.forName("US-ASCII");
     protected static final byte[] LAST_CHUNK = "0\r\n\r\n".getBytes(US_ASCII);
 
-    private final Sink sink;
+    private final WritablePipeline writablePipeline;
     private boolean hasBody = false;
 
-    protected WritableMessage(final Sink sink) {
-        this.sink = sink;
+    protected WritableMessage(final WritablePipeline writablePipeline) {
+        this.writablePipeline = writablePipeline;
     }
 
     /**
@@ -64,7 +64,7 @@ public abstract class WritableMessage {
      */
     public void addHeader(final String name, final String value) {
         if(name.equalsIgnoreCase("connection") && value.equals("close")) {
-            sink.closeWhenDone();
+            writablePipeline.closeWhenDone();
         }
         headers.put(name.toLowerCase(), value);
     }
@@ -122,7 +122,7 @@ public abstract class WritableMessage {
             if(isChunked) {
                 baos.write(HttpCodecUtil.CRLF);
             }
-            sink.write(this, ByteBuffer.wrap(baos.toByteArray()), null);
+            writablePipeline.write(this, ByteBuffer.wrap(baos.toByteArray()), null);
         }
         catch(IOException ioe) {
             // ByteArrayOutputStream does not throw this
@@ -156,9 +156,9 @@ public abstract class WritableMessage {
                 }
             }
             if(baos.size() > 0) {
-                sink.write(this, ByteBuffer.wrap(baos.toByteArray()), null);
+                writablePipeline.write(this, ByteBuffer.wrap(baos.toByteArray()), null);
             }
-            sink.end(this);
+            writablePipeline.end(this);
             hasEnded = true;
         }
         finally {
@@ -186,7 +186,7 @@ public abstract class WritableMessage {
 
     public void writeHead(final CompletionHandler<Integer, Void> handler) {
         final ByteArrayOutputStream baos = writeHead(doClose());
-        sink.write(this, ByteBuffer.wrap(baos.toByteArray()), handler);
+        writablePipeline.write(this, ByteBuffer.wrap(baos.toByteArray()), handler);
     }
 
     private ByteArrayOutputStream writeHead(final boolean doClose) {

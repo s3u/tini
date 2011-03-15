@@ -25,4 +25,12 @@ public class ClientRequestPipeline extends WritablePipeline {
     public ClientRequestPipeline(final AsynchronousSocketChannel channel) {
         super(channel);
     }
+
+    @Override
+    protected void beginWriting() {
+    }
+
+    @Override
+    protected void endWriting() {
+    }
 }

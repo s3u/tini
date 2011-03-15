@@ -35,27 +35,33 @@ import java.util.TimeZone;
  */
 public class ServerResponse extends WritableMessage {
 
+    // Response status
     private int status = 200;
+
+    // Response status message
     private String message = "OK";
 
-    private ServerRequest request;
+    // Request object for this response
+    private final ServerRequest request;
 
+    // Format for the Date header
     public final static String HTTP_DATE_PATTERN = "EEE, dd MMM yyyyy HH:mm:ss z";
     static final DateFormat httpDateFormat = new SimpleDateFormat(HTTP_DATE_PATTERN, Locale.US);
-
     static {
         httpDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
-    protected ServerResponse(final WritablePipeline sink) {
+    /**
+     * Creates a response.
+     *
+     * @param sink to write data
+     * @param request request
+     */
+    protected ServerResponse(final WritablePipeline sink,
+                             final ServerRequest request) {
         super(sink);
         this.headers.put("Server", "tini/1.0");
         this.headers.put("Date", httpDateFormat.format(new Date()));
-    }
-
-    protected ServerResponse(final WritablePipeline sink,
-                             final ServerRequest request) {
-        this(sink);
         this.request = request;
     }
 
@@ -79,6 +85,12 @@ public class ServerResponse extends WritableMessage {
         write(body.getBytes(Charset.forName("UTF-8")));
     }
 
+    /**
+     * Write the first line
+     *
+     * @param baos array to write to
+     * @throws IOException
+     */
     protected void writeFirstLine(final ByteArrayOutputStream baos) throws IOException {
         baos.write("HTTP/1.1".getBytes(US_ASCII));
         baos.write(HttpCodecUtil.SP);
@@ -87,6 +99,11 @@ public class ServerResponse extends WritableMessage {
         baos.write(this.message.getBytes(US_ASCII));
     }
 
+    /**
+     * Returns true if connection must be closed.
+     *
+     * @return boolean
+     */
     protected boolean doClose() {
         boolean close = false;
         if(request != null) {

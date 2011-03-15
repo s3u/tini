@@ -5,7 +5,7 @@ function die() {
 }
 
 fullPath=`dirname $0`
-jar=`find $fullPath/target/*with-dependencies.jar`
+jar=`find $fullPath/../target/*with-dependencies.jar`
 cp=`echo $jar | sed 's,./,'$fullPath'/,'`
 #javaArgs="-server -cp "$cp" $*"
 javaArgs="-Djava.util.logging.config.file=./logging.properties -server -Xmx2048m -cp "$cp" $*"

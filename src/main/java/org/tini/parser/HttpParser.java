@@ -142,7 +142,7 @@ public abstract class HttpParser {
 
         final List<CompletionHandler<Map<String, List<String>>, Void>> handlers = isTrailers ? onTrailers : onHeaders;
 
-        onLine(new CompletionHandler<StringBuilder, Void>() {
+        onLine(new StringBuilder(), maxHeaderLineSize, new CompletionHandler<StringBuilder, Void>() {
             @Override
             public void completed(final StringBuilder result, final Void attachment) {
                 if(result.length() == 2 && result.charAt(0) == HttpCodecUtil.CR && result.charAt(1) == HttpCodecUtil.LF ||
@@ -188,7 +188,7 @@ public abstract class HttpParser {
                             parseHeaderLine(line, headers);
                         }
                     }
-                    onLine(this, new StringBuilder(), maxHeaderLineSize);
+                    onLine(new StringBuilder(), maxHeaderLineSize, this);
                 }
             }
 
@@ -208,7 +208,7 @@ public abstract class HttpParser {
                     shutdown();
                 }
             }
-        }, new StringBuilder(), maxHeaderLineSize);
+        });
     }
 
     /**
@@ -225,7 +225,7 @@ public abstract class HttpParser {
                 if(contentLength <= bytesRemaining.get()) {
                     sendDataToApp(contentLength);
 
-                    onLine(new CompletionHandler<StringBuilder, Void>() {
+                    onLine(new StringBuilder(), maxHeaderLineSize, new CompletionHandler<StringBuilder, Void>() {
                         @Override
                         public void completed(final StringBuilder result, final Void attachment) {
                             findTrailers();
@@ -243,7 +243,7 @@ public abstract class HttpParser {
                                 findTrailers();
                             }
                         }
-                    }, new StringBuilder(), maxHeaderLineSize);
+                    });
                 }
                 else if(contentLength > bytesRemaining.get()) {
                     // Keep reading as many times as needed to get chunkSize bytes
@@ -288,6 +288,13 @@ public abstract class HttpParser {
     }
 
     // TODO: Multiple headers on a singe line not supported yet
+
+    /**
+     * Parse header line
+     *
+     * @param line line
+     * @param headers headers
+     */
     private static void parseHeaderLine(final String line, final Map<String, List<String>> headers) {
         final String[] header = splitHeader(line);
         final String name = header[0].toLowerCase();
@@ -302,8 +309,14 @@ public abstract class HttpParser {
         }
     }
 
-    // Read as many bytes as necessary till you find CRLF or reach the limit
-    protected void onLine(final CompletionHandler<StringBuilder, Void> handler, final StringBuilder line, final int limit) {
+    /**
+     * Read as many bytes as necessary till CRLF or the limit.
+     *
+     * @param line line to accumulate characters
+     * @param limit limit
+     * @param handler handler
+     */
+    protected void onLine(final StringBuilder line, final int limit, final CompletionHandler<StringBuilder, Void> handler) {
         if(first.get() || bytesRemaining.get() == 0) {
             first.compareAndSet(true, false);
             readBuffer.clear();
@@ -343,6 +356,11 @@ public abstract class HttpParser {
         }
     }
 
+    /**
+     * Get a byte from remaining bytes or -1 if none remaining.
+     *
+     * @return byte
+     */
     private byte getAByte() {
         byte b = -1;
         if(bytesRemaining.get() > 0) {
@@ -352,6 +370,13 @@ public abstract class HttpParser {
         return b;
     }
 
+    /**
+     * Process red bytes, and continue after exhausting
+     *
+     * @param line line
+     * @param limit limit
+     * @param handler handler
+     */
     private void inflightLine(final StringBuilder line, final int limit, final CompletionHandler<StringBuilder, Void> handler) {
         boolean found = false;
         final int pos = readBuffer.position();
@@ -395,14 +420,16 @@ public abstract class HttpParser {
         }
         else {
             // Call recursively to read more as you haven't found CRLF yet
-            onLine(handler, line, limit);
+            onLine(line, limit, handler);
         }
     }
 
-    // Non-blocking chunk reader - reads some bytes, and sends min(read, chunkSize) to the app
+    /**
+     * Non-blocking chunk reader - reads some bytes, and sends min(read, chunkSize) to the app
+     */
     private void readChunk() {
         // Read the first line to determine chunk size
-        onLine(new CompletionHandler<StringBuilder, Void>() {
+        onLine(new StringBuilder(), maxHeaderLineSize, new CompletionHandler<StringBuilder, Void>() {
             @Override
             public void completed(final StringBuilder result, final Void attachment) {
                 final String line = result.toString();
@@ -451,13 +478,16 @@ public abstract class HttpParser {
                     shutdown();
                 }
             }
-        }, new StringBuilder(), maxHeaderLineSize);
+        });
 
     }
 
+    /**
+     * Reads empty line and a chunk - used at the end of a chunk
+     */
     private void readEmptyLineAndChunk() {
         // Read the empty line and then the next chunk
-        onLine(new CompletionHandler<StringBuilder, Void>() {
+        onLine(new StringBuilder(), maxHeaderLineSize, new CompletionHandler<StringBuilder, Void>() {
             @Override
             public void completed(final StringBuilder result, final Void attachment) {
                 readChunk();
@@ -475,13 +505,21 @@ public abstract class HttpParser {
                     findTrailers();
                 }
             }
-        }, new StringBuilder(), maxHeaderLineSize);
+        });
     }
 
+    /**
+     * Pass data to the onData handler.
+     *
+     * @param size bytes to be sent.
+     */
     private void sendDataToApp(final int size) {
         // All the bytes have already been read into readBuffer - send chunkSide bytes to the app
         final int pos = readBuffer.position();
         final byte[] dest = new byte[size];
+
+        // This copy is necessary since ByteBuffer is not immutable, and we want to make sure that
+        // the handler reads all the bytes it is supposed to read, and no more or no less.
         System.arraycopy(readBuffer.array(), pos, dest, 0, size);
         try {
             onData.completed(ByteBuffer.wrap(dest), null);
@@ -496,6 +534,11 @@ public abstract class HttpParser {
         }
     }
 
+    /**
+     * Read some more bytes
+     *
+     * @param toRead bytes to try to read
+     */
     private void readSome(final int toRead) {
         // bytesRemaining should be zero now
         assert bytesRemaining.get() == 0;
@@ -529,6 +572,11 @@ public abstract class HttpParser {
         });
     }
 
+    /**
+     * Returns true if the message is chunked.
+     *
+     * @return boolean
+     */
     private boolean isChunked() {
         if(headers == null) {
             throw new NullPointerException("No headers");
@@ -537,6 +585,12 @@ public abstract class HttpParser {
         return val != null && val.size() > 0 && "chunked".equals(val.get(0));
     }
 
+    /**
+     * Returns content length from the headers.
+     *
+     * @param headers headers
+     * @return content length
+     */
     private int getContentLength(final Map<String, List<String>> headers) {
         final Iterable<String> val = headers.get("content-length");
         int length = -1;
@@ -555,6 +609,12 @@ public abstract class HttpParser {
     }
 
 
+    /**
+     * A dummy handler.
+     *
+     * @param <V>
+     * @param <A>
+     */
     private class NullCompletionHandler<V, A> implements CompletionHandler<V, A> {
         @Override
         public void completed(final V result, final A attachment) {
@@ -566,6 +626,9 @@ public abstract class HttpParser {
         }
     }
 
+    /**
+     * A dummy handler for processing buffers
+     */
     private class ReadingCompletionHandler implements CompletionHandler<ByteBuffer, Void> {
         @Override
         public void completed(final ByteBuffer result, final Void attachment) {

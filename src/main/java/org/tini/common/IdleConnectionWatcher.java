@@ -54,12 +54,12 @@ public final class IdleConnectionWatcher {
         timer.schedule(new IdleTimeoutTask(), idleTimeoutMillis);
     }
 
-    protected void reading() {
+    public void reading() {
         readers.incrementAndGet();
         lastTime = System.currentTimeMillis();
     }
 
-    protected void doneReading() {
+    public void doneReading() {
         readers.decrementAndGet();
         lastTime = System.currentTimeMillis();
     }
@@ -67,7 +67,7 @@ public final class IdleConnectionWatcher {
     /**
      * Call this before writing
      */
-    protected void writing() {
+    public void writing() {
         writers.incrementAndGet();
         lastTime = System.currentTimeMillis();
     }
@@ -75,7 +75,7 @@ public final class IdleConnectionWatcher {
     /**
      * Call this after writing
      */
-    protected void doneWriting() {
+    public void doneWriting() {
         writers.decrementAndGet();
         lastTime = System.currentTimeMillis();
     }

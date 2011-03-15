@@ -35,6 +35,13 @@ public class ResponseParser extends HttpParser {
     // In this implementation, each message will be removed from the pipeline.
     private final List<CompletionHandler<ResponseLine, Void>> onResponseLine = new ArrayList<CompletionHandler<ResponseLine, Void>>(1);
 
+    /**
+     * Creates a response parser.
+     *
+     * @param channel channel to read responses from.
+     * @param timeout read timeout
+     * @param timeUnit read timeout unit
+     */
     public ResponseParser(final AsynchronousSocketChannel channel,
                           final long timeout,
                           final TimeUnit timeUnit) {
@@ -51,16 +58,13 @@ public class ResponseParser extends HttpParser {
     }
 
     /**
-     * Read the next response message
+     * Initiates parsing by looking for the first line.
      */
+    @Override
     public synchronized void go() {
-        findResponseLine();
-    }
-
-    private void findResponseLine() {
         final StringBuilder line = new StringBuilder();
 
-        onLine(new CompletionHandler<StringBuilder, Void>() {
+        onLine(line, maxInitialLineLength, new CompletionHandler<StringBuilder, Void>() {
             @Override
             public void completed(final StringBuilder result, final Void attachment) {
                 final String[] initialLine = splitInitialLine(line.toString());
@@ -110,6 +114,6 @@ public class ResponseParser extends HttpParser {
                     shutdown();
                 }
             }
-        }, line, maxInitialLineLength);
+        });
     }
 }

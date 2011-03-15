@@ -38,17 +38,25 @@ public class HttpServer {
 
     private static final Logger logger = Logger.getLogger("org.tini.server");
 
-    // Application handlers
+    // Application handlers - registered to process incoming requests
     private final Map<String, Object> handlers;
 
+    // Reads will be timed out after this default interval
     private long readTimeout = 5;
     private TimeUnit readTimeoutUnit = TimeUnit.SECONDS;
+
+    // Idle connections from clients will be closed after this default interval
     private long idleTimeout = 60;
     private TimeUnit idleTimeoutUnit = TimeUnit.SECONDS;
+
+    // Additional options for the channel - see {@SocketOption} for available options
     private final Map<SocketOption, Object> options = new HashMap<SocketOption, Object>();
 
+    // Channel group for open channels
+    private AsynchronousChannelGroup channelGroup;
+
     /**
-     * Create a server.
+     * Create and returns a server.
      *
      * @return server
      */
@@ -56,6 +64,9 @@ public class HttpServer {
         return new HttpServer();
     }
 
+    /**
+     * Creates a server instance.
+     */
     private HttpServer() {
         handlers = new HashMap<String, Object>();
     }
@@ -144,8 +155,6 @@ public class HttpServer {
         });
     }
 
-    private AsynchronousChannelGroup channelGroup;
-
     /**
      * Listen to requests at the given port and invokes the handler on success.
      *
@@ -170,8 +179,9 @@ public class HttpServer {
 
                     // Create pipelines and parser
                     final ServerRequestPipeline requestPipeline = new ServerRequestPipeline(channel, options, handlers,
-                        idleTimeout, idleTimeoutUnit, readTimeout, readTimeoutUnit);
-                    final ServerResponsePipeline responsePipeline = new ServerResponsePipeline(channel);
+                        readTimeout, readTimeoutUnit);
+                    final ServerResponsePipeline responsePipeline = new ServerResponsePipeline(channel,
+                        idleTimeout, idleTimeoutUnit);
 
                     // Process requests from the writablesQueue
                     requestPipeline.process(responsePipeline);

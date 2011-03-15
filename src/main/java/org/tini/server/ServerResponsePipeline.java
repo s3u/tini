@@ -18,6 +18,7 @@ import org.tini.common.IdleConnectionWatcher;
 import org.tini.common.WritablePipeline;
 
 import java.nio.channels.AsynchronousSocketChannel;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Subbu Allamaraju
@@ -25,11 +26,35 @@ import java.nio.channels.AsynchronousSocketChannel;
 public class ServerResponsePipeline extends WritablePipeline {
 
     // Watch for idle connections
-//    private final IdleConnectionWatcher idleWatcher;
+    private final IdleConnectionWatcher idleWatcher;
 
-    public ServerResponsePipeline(final AsynchronousSocketChannel channel) {
+    /**
+     * Creates a response pipeline.
+     *
+     * @param channel channel
+     * @param idleTimeout idle timeout
+     * @param idleTimeoutUnit idle timeout unit
+     */
+    protected ServerResponsePipeline(final AsynchronousSocketChannel channel,
+                                  final long idleTimeout,
+                                  final TimeUnit idleTimeoutUnit) {
         super(channel);
+        idleWatcher = new IdleConnectionWatcher(channel, idleTimeoutUnit.toMillis(idleTimeout));
+    }
 
-//        idleWatcher = new IdleConnectionWatcher(channel, idleTimeoutUnit.toMillis(idleTimeout));
+    /**
+     * Pre-filter
+     */
+    @Override
+    protected void beginWriting() {
+        idleWatcher.writing();
+    }
+
+    /**
+     * Post-filter
+     */
+    @Override
+    protected void endWriting() {
+        idleWatcher.doneWriting();
     }
 }

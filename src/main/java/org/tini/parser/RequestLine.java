@@ -24,6 +24,13 @@ public class RequestLine {
     private final String uri;
     private final String version;
 
+    /**
+     * Creates a request line
+     *
+     * @param method request method
+     * @param uri request URI
+     * @param version HTTP version
+     */
     public RequestLine(final String method, final String uri, final String version) {
         this.method = method;
         this.uri = uri;

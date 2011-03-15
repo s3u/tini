@@ -40,14 +40,27 @@ import java.util.Map;
  */
 public class ServerRequest extends ReadableMessage {
 
+    // Request line
     private final RequestLine requestLine;
+
+    // Headers - a copy is kept here to provide convenience accessors
     private Map<String, List<String>> headers = Collections.EMPTY_MAP;
 
+    /**
+     * Creates a request.
+     *
+     * @param requestLine request line
+     */
     ServerRequest(final RequestLine requestLine) {
         super();
         this.requestLine = requestLine;
     }
 
+    /**
+     * Sets headers - set by the parsing pipeline
+     *
+     * @param headers headers
+     */
     void setHeaders(final Map<String, List<String>> headers) {
         this.headers = headers;
     }

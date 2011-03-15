@@ -20,19 +20,17 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * @author Subbu Allamaraju
  */
-// TODO: Idle connection closing
-public class WritablePipeline extends MessagePipeline<WritableMessage> implements Sink {
+public abstract class WritablePipeline extends MessagePipeline<WritableMessage> {
 
     private static final Logger logger = Logger.getLogger("org.tini.common");
 
+    // Channel to write to
     private final AsynchronousSocketChannel channel;
 
     // Pending writes.
@@ -42,34 +40,33 @@ public class WritablePipeline extends MessagePipeline<WritableMessage> implement
     private boolean closeWhenDone = false;
     private boolean ended = false;
 
+    /**
+     * Creates a pipeline
+     *
+     * @param channel channel
+     */
     protected WritablePipeline(final AsynchronousSocketChannel channel) {
         super();
         this.channel = channel;
     }
 
-
-    @Override
+    /**
+     * Writes remaining() number of bytes from the start of the byte buffer. If the given is message
+     * is not the current, the data will be buffered.
+     *
+     * @param message current message
+     * @param byteBuffer source
+     * @param handler completion handler
+     */
     public void write(final WritableMessage message, final ByteBuffer byteBuffer, final CompletionHandler<Integer, Void> handler) {
         byteBuffer.rewind();
         if(message == peek()) {
-            if(handler == null) {
-                final Future f = channel.write(byteBuffer);
-                try {
-                    f.get(); // TODO - switch to queued writing
-                }
-                catch(ExecutionException ee) {
-                    // TODO: Bad
-                    ee.printStackTrace();
-                }
-                catch(InterruptedException ie) {
-                    // TODO: Bad
-                    ie.printStackTrace();
-                }
-            }
-            else {
-                channel.write(byteBuffer, null, new CompletionHandler<Integer, Void>() {
-                    @Override
-                    public void completed(final Integer result, final Void attachment) {
+            beginWriting();
+            channel.write(byteBuffer, null, new CompletionHandler<Integer, Void>() {
+                @Override
+                public void completed(final Integer result, final Void attachment) {
+                    endWriting();
+                    if(handler != null) {
                         try {
                             handler.completed(result, attachment);
                         }
@@ -78,10 +75,13 @@ public class WritablePipeline extends MessagePipeline<WritableMessage> implement
 
                         }
                     }
+                }
 
-                    @Override
-                    public void failed(final Throwable exc, final Void attachment) {
-                        logger.log(Level.WARNING, exc.getMessage(), exc);
+                @Override
+                public void failed(final Throwable exc, final Void attachment) {
+                    endWriting();
+                    logger.log(Level.WARNING, exc.getMessage(), exc);
+                    if(handler != null) {
                         try {
                             handler.failed(exc, attachment);
                         }
@@ -89,8 +89,8 @@ public class WritablePipeline extends MessagePipeline<WritableMessage> implement
                             logger.log(Level.WARNING, t.getMessage(), t);
                         }
                     }
-                });
-            }
+                }
+            });
         }
         else {
             // Need to buffer response
@@ -101,26 +101,52 @@ public class WritablePipeline extends MessagePipeline<WritableMessage> implement
         }
     }
 
-    @Override
+    /**
+     * Closes the connection after writing is completed.
+     */
     public void closeWhenDone() {
         closeWhenDone = true;
     }
 
-    @Override
+    /**
+     * Flush any pending buffers and end the message.
+     *
+     * @param message
+     */
     public void end(final WritableMessage message) {
         this.ended = true;
         flush(message);
     }
 
+    /**
+     * Return true if there are any buffers opened - happens in the case of head-of-line blocking.
+     * @return boolean
+     */
     private boolean isBuffering() {
         return buffers.size() > 0;
     }
 
+    /**
+     * Flush buffers to the channel, if the message is the current.
+     *
+     * @param message current message
+     */
     private void flush(final WritableMessage message) {
         if(message == peek()) {
             for(final ByteBuffer byteBuffer : buffers) {
                 byteBuffer.rewind();
-                channel.write(byteBuffer);
+                beginWriting();
+                channel.write(byteBuffer, null, new CompletionHandler<Integer, Void>() {
+                    @Override
+                    public void completed(final Integer result, final Void attachment) {
+                        endWriting();
+                    }
+
+                    @Override
+                    public void failed(final Throwable exc, final Void attachment) {
+                        endWriting();
+                    }
+                });
             }
 
             try {
@@ -154,4 +180,14 @@ public class WritablePipeline extends MessagePipeline<WritableMessage> implement
             }
         }
     }
+
+    /**
+     * Pre-filter
+     */
+    abstract protected void beginWriting();
+
+    /**
+     * Post-filter
+     */
+    abstract protected void endWriting();
 }

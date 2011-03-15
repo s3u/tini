@@ -23,6 +23,13 @@ public class ResponseLine
     private final String status;
     private final String version;
 
+    /**
+     * Creates a response line
+     *
+     * @param version HTTP version
+     * @param code response code
+     * @param status response status
+     */
     ResponseLine(final String version, final int code, final String status) {
         this.code = code;
         this.status = status;

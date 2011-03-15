@@ -34,27 +34,34 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * <p>A writablesQueue is associated with a channel/connection. Since a client can send one or several
- * requests on a given connection, an instance of this class represents all the requests and
- * responses made on that connection.<p/>
- * <p/>
- * <p>This class also manages connection lifecycle such as termination, and pipelining.</p>
+ * <p>Each open channel is associated with a request pipeline and a response pipeline. On the
+ * server side, the request pipeline binds itself with an HTTP parser, receives parse events, and
+ * invokes application handlers with request and response objects.</p>
  *
  * @author Subbu Allamaraju
  */
 public class ServerRequestPipeline extends ReadablePipeline {
 
     private static final Logger logger = Logger.getLogger("org.tini.server");
+
+    // Request parser
     private final RequestParser parser;
 
     // Handlers
     private final Map<String, Object> handlers;
 
+    /**
+     * Creates a request pipeline.
+     *
+     * @param channel channel
+     * @param options channel options
+     * @param handlers application handlers
+     * @param readTimeout read timeout
+     * @param readTimeoutUnit read timeout unit
+     */
     ServerRequestPipeline(final AsynchronousSocketChannel channel,
                           final Map<SocketOption, Object> options,
                           final Map<String, Object> handlers,
-                          final long idleTimeout,
-                          final TimeUnit idleTimeoutUnit,
                           final long readTimeout,
                           final TimeUnit readTimeoutUnit) {
 
@@ -62,7 +69,6 @@ public class ServerRequestPipeline extends ReadablePipeline {
         this.handlers = handlers;
 
         parser = new RequestParser(channel, readTimeout, readTimeoutUnit);
-
         try {
             for(final SocketOption option : options.keySet()) {
                 channel.setOption(option, options.get(option));
@@ -80,9 +86,9 @@ public class ServerRequestPipeline extends ReadablePipeline {
     }
 
     /**
-     * <p>Start processing the request writablesQueue and fill up the response writablesQueue.</p>
+     * <p>Bind this pipeline with the parser, and process requests as parse events arrive.</p>
      *
-     * @param writablePipeline response writablesQueue
+     * @param writablePipeline response pipeline
      */
     public void process(final WritablePipeline writablePipeline) {
         // Find a new request line
@@ -90,7 +96,7 @@ public class ServerRequestPipeline extends ReadablePipeline {
             @Override
             public void completed(final RequestLine requestLine, final Void attachment) {
                 final ServerRequest request = new ServerRequest(requestLine);
-                final ServerResponse response = new ServerResponse(writablePipeline);
+                final ServerResponse response = new ServerResponse(writablePipeline, request);
                 try {
                     push(request);
                     writablePipeline.push(response);
@@ -104,9 +110,6 @@ public class ServerRequestPipeline extends ReadablePipeline {
             @Override
             public void failed(final Throwable exc, final Void attachment) {
                 logger.log(Level.SEVERE, exc.getMessage(), exc);
-                final ServerResponse response = new ServerResponse(writablePipeline);
-                response.setStatus(400, "Bad Request");
-                response.end();
             }
         });
 
@@ -121,7 +124,7 @@ public class ServerRequestPipeline extends ReadablePipeline {
                 }
 
                 // Invoke the app
-                invokeApp(request, response, handlers);
+                invokeApp(request, response);
             }
 
             @Override
@@ -172,8 +175,13 @@ public class ServerRequestPipeline extends ReadablePipeline {
         parser.go();
     }
 
-    private void invokeApp(final ServerRequest httpRequest, final ServerResponse httpResponse,
-                           final Map<String, Object> handlers) {
+    /**
+     * Find and invoke the app. If an app handler is not found, return 404.
+     *
+     * @param httpRequest request
+     * @param httpResponse response
+     */
+    private void invokeApp(final ServerRequest httpRequest, final ServerResponse httpResponse) {
         final String methodName = httpRequest.getRequestLine().getMethod();
         final Class methodAnnotation;
         try {
