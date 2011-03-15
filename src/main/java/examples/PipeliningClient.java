@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Open one connection, and keep sending requests using the same connection.
- * <p/>
- * Expect the client to writablesQueue (buffer or multiplex) automatically.
+ * <p>Open a connection, and keep sending several requests using the same connection.</p>
+ *
+ * @author Subbu Allamaraju
  */
 public class PipeliningClient {
 

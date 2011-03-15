@@ -30,6 +30,8 @@ import java.nio.file.StandardOpenOption;
 
 /**
  * Simple file server
+ *
+ * @author Subbu Allamaraju
  */
 public class FileServer {
 

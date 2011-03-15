@@ -20,7 +20,9 @@ import org.tini.server.ServerResponse;
 import org.tini.server.HttpServer;
 
 /**
- * Test pipelining
+ * Illustrates pipelining.
+ *
+ * @author Subbu Allamaraju
  */
 public class PipeliningServer {
 

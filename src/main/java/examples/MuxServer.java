@@ -15,20 +15,13 @@
 
 package examples;
 
-import org.tini.client.ClientConnection;
-import org.tini.client.ClientRequest;
-import org.tini.server.HttpServer;
 import org.tini.server.ServerRequest;
 import org.tini.server.ServerResponse;
 
-import javax.ws.rs.GET;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Random;
 
 /**

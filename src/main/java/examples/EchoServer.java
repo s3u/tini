@@ -26,7 +26,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Echo app
+ * Echo client requests.
+ *
+ * @author Subbu Allamaraju
  */
 public class EchoServer {
 

@@ -21,6 +21,8 @@ import org.tini.server.HttpServer;
 
 /**
  * Test pipelining
+ *
+ * @author Subbu Allamaraju
  */
 public class KeepAliveServer {
 

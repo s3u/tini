@@ -16,7 +16,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Async client example
+ * An async client
+ *
+ * @author Subbu Allamaraju
  */
 public class AsyncClient {
 

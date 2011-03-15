@@ -23,18 +23,33 @@ import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * <p>This example shows how to create a server, and say hello to the client.</p>
+ *
+ * @author Subbu Allamaraju
+ */
 public class HelloWorldServer {
 
-    public static void main(final String[] args) throws Exception {
+    /**
+     * Main method to start the server.
+     *
+     * @param args args
+     * @throws IOException thrown in case of IO errors
+     */
+    public static void main(final String[] args) throws IOException {
+        // Create an HTTP server.
         final HttpServer server = HttpServer.createServer();
+
+        // Set the idle timeout - after this timeout, open connections from clients will be closed.
         server.setIdleTimeout(60, TimeUnit.SECONDS);
 
-        // 204
-        server.use("/204",
+        // Handle requests with URI path "/no-body"
+        server.use("/no-body",
             new Object() {
                 @GET
                 public void get(final ServerRequest request, final ServerResponse response) {
@@ -46,6 +61,7 @@ public class HelloWorldServer {
             }
         );
 
+        // Handle requests with path "/close"
         // Test without ab -k
         server.use("/close",
             new Object() {
@@ -79,6 +95,8 @@ public class HelloWorldServer {
             }
 
         );
+
+        // Specify the port
         server.listen(3000);
     }
 }
