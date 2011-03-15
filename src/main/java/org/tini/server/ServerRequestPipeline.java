@@ -14,7 +14,6 @@
 
 package org.tini.server;
 
-import org.tini.common.IdleConnectionWatcher;
 import org.tini.common.ReadableMessage;
 import org.tini.common.ReadablePipeline;
 import org.tini.common.WritablePipeline;
@@ -45,10 +44,6 @@ import java.util.logging.Logger;
  */
 public class ServerRequestPipeline extends ReadablePipeline {
 
-    // Watch for idle connections
-    // TODO
-    private final IdleConnectionWatcher idleWatcher;
-
     private static final Logger logger = Logger.getLogger("org.tini.server");
     private final RequestParser parser;
 
@@ -67,8 +62,6 @@ public class ServerRequestPipeline extends ReadablePipeline {
         this.handlers = handlers;
 
         parser = new RequestParser(channel, readTimeout, readTimeoutUnit);
-
-        idleWatcher = new IdleConnectionWatcher(channel, idleTimeoutUnit.toMillis(idleTimeout));
 
         try {
             for(final SocketOption option : options.keySet()) {
@@ -120,61 +113,40 @@ public class ServerRequestPipeline extends ReadablePipeline {
         parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
             @Override
             public void completed(final Map<String, List<String>> result, final Void attachment) {
-                try {
-                    final ServerRequest request = (ServerRequest) peek();
-                    request.setHeaders(result);
-                    final ServerResponse response = (ServerResponse) writablePipeline.peek();
-                    if("close".equals(request.getHeader("connection"))) {
-                        writablePipeline.closeWhenDone();
-                    }
+                final ServerRequest request = (ServerRequest) peek();
+                request.setHeaders(result);
+                final ServerResponse response = (ServerResponse) writablePipeline.peek();
+                if("close".equals(request.getHeader("connection"))) {
+                    writablePipeline.closeWhenDone();
+                }
 
-                    // Invoke the app
-                    invokeApp(request, response, handlers);
-                }
-                catch(InterruptedException ie) {
-                    // TODO
-                }
+                // Invoke the app
+                invokeApp(request, response, handlers);
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                try {
-                    final ServerResponse response = (ServerResponse) writablePipeline.poll();
-                    logger.log(Level.SEVERE, exc.getMessage(), exc);
-                    response.setStatus(500, "Internal Server Error");
-                    response.end();
-                }
-                catch(InterruptedException ie) {
-                    // TODO
-                }
-
+                final ServerResponse response = (ServerResponse) writablePipeline.poll();
+                logger.log(Level.SEVERE, exc.getMessage(), exc);
+                response.setStatus(500, "Internal Server Error");
+                response.end();
             }
         });
 
         parser.onData(new CompletionHandler<ByteBuffer, Void>() {
             @Override
             public void completed(final ByteBuffer result, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = peek();
-                    if(readableMessage != null) {
-                        readableMessage.data(result);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = peek();
+                if(readableMessage != null) {
+                    readableMessage.data(result);
                 }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = poll();
-                    if(readableMessage != null) {
-                        readableMessage.failure(exc);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = poll();
+                if(readableMessage != null) {
+                    readableMessage.failure(exc);
                 }
             }
         });
@@ -182,27 +154,17 @@ public class ServerRequestPipeline extends ReadablePipeline {
         parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
             @Override
             public void completed(final Map<String, List<String>> result, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = poll();
-                    if(readableMessage != null) {
-                        readableMessage.trailers(result);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = poll();
+                if(readableMessage != null) {
+                    readableMessage.trailers(result);
                 }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = poll();
-                    if(readableMessage != null) {
-                        readableMessage.failure(exc);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = poll();
+                if(readableMessage != null) {
+                    readableMessage.failure(exc);
                 }
             }
         });

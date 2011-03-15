@@ -15,37 +15,20 @@
 package org.tini.common;
 
 import java.nio.channels.AsynchronousSocketChannel;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 /**
  * @author Subbu Allamaraju
  */
-public class ReadablePipeline {
+public class ReadablePipeline extends MessagePipeline<ReadableMessage> {
 
     protected static final Logger logger = Logger.getLogger("org.tini.common");
 
     // Channel
     protected final AsynchronousSocketChannel channel;
 
-    // Pending reads
-    private final BlockingQueue<ReadableMessage> readablesQueue;
-
     public ReadablePipeline(final AsynchronousSocketChannel channel) {
+        super();
         this.channel = channel;
-        readablesQueue = new LinkedBlockingQueue<ReadableMessage>();
-    }
-
-    public void push(final ReadableMessage message) throws InterruptedException {
-        readablesQueue.put(message);
-    }
-
-    public ReadableMessage peek() throws InterruptedException {
-        return readablesQueue.peek();
-    }
-
-    public ReadableMessage poll() throws InterruptedException {
-        return readablesQueue.poll();
     }
 }

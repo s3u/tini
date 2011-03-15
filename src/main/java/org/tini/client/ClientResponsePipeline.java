@@ -43,24 +43,17 @@ public class ClientResponsePipeline extends ReadablePipeline {
         parser.onResponseLine(new CompletionHandler<ResponseLine, Void>() {
             @Override
             public void completed(final ResponseLine result, final Void attachment) {
-                try {
-                    // Ask the pipeline for the next request - since the request and response
-                    // pipelines may be cleared at different points, ask the response pipeline and
-                    // then pick its request.
-                    final ClientResponse clientResponse = (ClientResponse) peek();
+                // Ask the pipeline for the next request - since the request and response
+                // pipelines may be cleared at different points, ask the response pipeline and
+                // then pick its request.
+                final ClientResponse clientResponse = (ClientResponse) peek();
 
-                    // Set the response line
-                    clientResponse.setResponseLine(result);
-                    final ClientRequest clientRequest = clientResponse.getRequest();
+                // Set the response line
+                clientResponse.setResponseLine(result);
+                final ClientRequest clientRequest = clientResponse.getRequest();
 
-                    // Call request.onResponse.completed()
-                    clientRequest.response(clientResponse);
-                }
-                catch(InterruptedException ie) {
-                    // TODO
-                    // onResponse.failed(ie, null);
-                    ie.printStackTrace();
-                }
+                // Call request.onResponse.completed()
+                clientRequest.response(clientResponse);
             }
 
             @Override
@@ -74,81 +67,51 @@ public class ClientResponsePipeline extends ReadablePipeline {
         parser.onHeaders(new CompletionHandler<Map<String, List<String>>, Void>() {
             @Override
             public void completed(final Map<String, List<String>> result, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = peek();
-                    if(readableMessage != null) {
-                        readableMessage.headers(result);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = peek();
+                if(readableMessage != null) {
+                    readableMessage.headers(result);
                 }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = poll();
-                    if(readableMessage != null) {
-                        readableMessage.failure(exc);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = poll();
+                if(readableMessage != null) {
+                    readableMessage.failure(exc);
                 }
             }
         });
         parser.onData(new CompletionHandler<ByteBuffer, Void>() {
             @Override
             public void completed(final ByteBuffer result, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = peek();
-                    if(readableMessage != null) {
-                        readableMessage.data(result);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = peek();
+                if(readableMessage != null) {
+                    readableMessage.data(result);
                 }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = poll();
-                    if(readableMessage != null) {
-                        readableMessage.failure(exc);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = poll();
+                if(readableMessage != null) {
+                    readableMessage.failure(exc);
                 }
             }
         });
         parser.onTrailers(new CompletionHandler<Map<String, List<String>>, Void>() {
             @Override
             public void completed(final Map<String, List<String>> result, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = poll();
-                    if(readableMessage != null) {
-                        readableMessage.trailers(result);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = poll();
+                if(readableMessage != null) {
+                    readableMessage.trailers(result);
                 }
             }
 
             @Override
             public void failed(final Throwable exc, final Void attachment) {
-                try {
-                    final ReadableMessage readableMessage = poll();
-                    if(readableMessage != null) {
-                        readableMessage.failure(exc);
-                    }
-                }
-                catch(InterruptedException ie) {
-                    ie.printStackTrace();
+                final ReadableMessage readableMessage = poll();
+                if(readableMessage != null) {
+                    readableMessage.failure(exc);
                 }
             }
         });

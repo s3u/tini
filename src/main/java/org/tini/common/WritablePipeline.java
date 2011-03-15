@@ -20,10 +20,8 @@ import java.nio.channels.AsynchronousSocketChannel;
 import java.nio.channels.CompletionHandler;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,49 +29,29 @@ import java.util.logging.Logger;
  * @author Subbu Allamaraju
  */
 // TODO: Idle connection closing
-public class WritablePipeline implements Sink {
+public class WritablePipeline extends MessagePipeline<WritableMessage> implements Sink {
 
     private static final Logger logger = Logger.getLogger("org.tini.common");
 
     private final AsynchronousSocketChannel channel;
 
     // Pending writes.
-    private final BlockingQueue<WritableMessage> writablesQueue;
     private final List<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
-
 
     // Close if explicitly asked for
     private boolean closeWhenDone = false;
     private boolean ended = false;
 
     protected WritablePipeline(final AsynchronousSocketChannel channel) {
-        writablesQueue = new LinkedBlockingQueue<WritableMessage>();
+        super();
         this.channel = channel;
     }
 
-    /**
-     * <p>Push a writable message (i.e, client request or server response) into a queue.</p>
-     *
-     * @param message message
-     * @throws InterruptedException
-     */
-    @Override
-    public void push(final WritableMessage message) throws InterruptedException {
-        writablesQueue.put(message);
-    }
-
-    public WritableMessage peek() throws InterruptedException {
-        return writablesQueue.peek();
-    }
-
-    public WritableMessage poll() throws InterruptedException {
-        return writablesQueue.poll();
-    }
 
     @Override
     public void write(final WritableMessage message, final ByteBuffer byteBuffer, final CompletionHandler<Integer, Void> handler) {
         byteBuffer.rewind();
-        if(message == writablesQueue.peek()) {
+        if(message == peek()) {
             if(handler == null) {
                 final Future f = channel.write(byteBuffer);
                 try {
@@ -139,7 +117,7 @@ public class WritablePipeline implements Sink {
     }
 
     private void flush(final WritableMessage message) {
-        if(message == writablesQueue.peek()) {
+        if(message == peek()) {
             for(final ByteBuffer byteBuffer : buffers) {
                 byteBuffer.rewind();
                 channel.write(byteBuffer);
@@ -147,7 +125,7 @@ public class WritablePipeline implements Sink {
 
             try {
                 // Remove from top
-                writablesQueue.take();
+                poll();
                 flushCompleted();
             }
             catch(InterruptedException ie) {
@@ -157,21 +135,16 @@ public class WritablePipeline implements Sink {
     }
 
     private void flushCompleted() throws InterruptedException {
-        WritableMessage top = writablesQueue.peek();
+        WritableMessage top = peek();
         // If the top is not buffering, it will go away once it is done. We don't need to worry
         // about it here.
         while(top != null && isBuffering() && ended) {
             logger.info("buffering top found " + top.hashCode() + " " + ended);
             // Flush this
             flush(top);
-            try {
-                top = writablesQueue.take();
-            }
-            catch(InterruptedException ie) {
-                logger.log(Level.WARNING, ie.getMessage(), ie);
-            }
+            top = poll();
         }
-        if(writablesQueue.peek() == null && closeWhenDone) {
+        if(peek() == null && closeWhenDone) {
             try {
                 logger.info("Closing the connection");
                 channel.close();

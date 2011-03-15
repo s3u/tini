@@ -27,8 +27,7 @@ import java.util.logging.Logger;
  * @author Subbu Allamaraju
  */
 // TODO: Revise design - should handle both server and client
-public final class IdleConnectionWatcher
-{
+public final class IdleConnectionWatcher {
     private static final Logger logger = Logger.getLogger("org.tini.common");
 
     private final AtomicInteger readers = new AtomicInteger(0);
@@ -43,16 +42,26 @@ public final class IdleConnectionWatcher
     /**
      * Create
      *
-     * @param channel channel
+     * @param channel          channel
      * @param idleTimeoutMills timeout
      */
     public IdleConnectionWatcher(final AsynchronousSocketChannel channel,
-                          final long idleTimeoutMills) {
+                                 final long idleTimeoutMills) {
         this.channel = channel;
         lastTime = System.currentTimeMillis();
         this.idleTimeoutMillis = idleTimeoutMills;
         timer = new Timer("aio.idle", true);
         timer.schedule(new IdleTimeoutTask(), idleTimeoutMillis);
+    }
+
+    protected void reading() {
+        readers.incrementAndGet();
+        lastTime = System.currentTimeMillis();
+    }
+
+    protected void doneReading() {
+        readers.decrementAndGet();
+        lastTime = System.currentTimeMillis();
     }
 
     /**

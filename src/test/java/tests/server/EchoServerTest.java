@@ -58,6 +58,7 @@ public class EchoServerTest {
         response.write(line);
         echoed.add(line);
     }
+
     private void echo(final ServerResponse response, final ByteBuffer bytes) {
         final CharBuffer charBuffer = Charset.forName("UTF-8").decode(bytes);
         final String line = charBuffer.toString();
@@ -66,6 +67,11 @@ public class EchoServerTest {
 
     @Before
     public void startServer() throws Exception {
+        if("Darwin".equals(System.getProperty("os.name"))) {
+            // Not supported on windows
+            return;
+        }
+
         server = HttpServer.createServer();
         server.use(new Object() {
             public void service(final ServerRequest request, final ServerResponse response) {
@@ -134,6 +140,11 @@ public class EchoServerTest {
 
     @After
     public void stopServer() throws Exception {
+        if("Darwin".equals(System.getProperty("os.name"))) {
+            // Not supported on windows
+            return;
+        }
+
         assertNotNull(server);
         // Wait for tests to finish
         try {
@@ -147,6 +158,11 @@ public class EchoServerTest {
 
     @Test
     public void testEcho() throws Exception {
+        if("Darwin".equals(System.getProperty("os.name"))) {
+            // Not supported on windows
+            return;
+        }
+
         // Wait for the server to start
         try {
             serverStart.await(10, TimeUnit.SECONDS);

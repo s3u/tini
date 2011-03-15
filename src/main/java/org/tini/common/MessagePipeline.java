@@ -12,24 +12,31 @@
  * limitations under the License.
  */
 
-package org.tini.server;
+package org.tini.common;
 
-import org.tini.common.IdleConnectionWatcher;
-import org.tini.common.WritablePipeline;
-
-import java.nio.channels.AsynchronousSocketChannel;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * @author Subbu Allamaraju
  */
-public class ServerResponsePipeline extends WritablePipeline {
+public class MessagePipeline<T> {
 
-    // Watch for idle connections
-//    private final IdleConnectionWatcher idleWatcher;
+    private final BlockingQueue<T> messageQueue;
 
-    public ServerResponsePipeline(final AsynchronousSocketChannel channel) {
-        super(channel);
+    public MessagePipeline() {
+        this.messageQueue = new LinkedBlockingQueue<T>();
+    }
 
-//        idleWatcher = new IdleConnectionWatcher(channel, idleTimeoutUnit.toMillis(idleTimeout));
+    public void push(final T message) throws InterruptedException {
+        messageQueue.put(message);
+    }
+
+    public T peek() {
+        return messageQueue.peek();
+    }
+
+    public T poll() {
+        return messageQueue.poll();
     }
 }
